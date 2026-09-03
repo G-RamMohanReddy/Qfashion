@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.vercel/
+
+# Firebase web config. These values are public (they ship in the bundle), but
+# they belong in Vercel's Environment Variables rather than in the repo — see
+# README §2. Committing this file instead also works if you prefer.
+.env
+.env.local
+.env.*.local
+!.env.example
+
+*.log
+.DS_Store
