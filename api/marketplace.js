@@ -123,7 +123,7 @@ return async function handler(req, res) {
         const order = (await tx.get(ref)).data();
         requireValue(order?.uid === actor.uid, 'Order not found', 404);
         requireValue(order.status === 'awaiting_payment' && order.expiresAt > now(), 'Payment window closed; contact support if you paid', 409);
-        tx.update(ref, { paymentStatus: 'awaiting_verification', status: 'awaiting_verification', submittedReference: reference, updatedAt: now() });
+        tx.update(ref, { paymentStatus: 'awaiting_verification', status: 'awaiting_verification', submittedReference: reference, submittedAt: now(), updatedAt: now(), history: [...order.history, { status: 'awaiting_verification', ts: now(), actor: actor.uid }] });
       });
       return res.json({ status: 'awaiting_verification' });
     }
@@ -193,6 +193,8 @@ return async function handler(req, res) {
         order.items.forEach((i, n) => tx.update(refs[n], { stock: snaps[n].data().stock + i.qty }));
         tx.update(ref, { status: 'cancelled', paymentStatus: order.paymentStatus !== 'pending' ? 'refund_review' : 'cancelled', cancelledAt: now(), updatedAt: now(), history: [...order.history, { status: 'cancelled', ts: now(), actor: actor.uid }] });
         if (unpaid) tx.delete(db.doc(`activeCheckouts/${order.uid}`));
+        tx.delete(db.doc(`deliverySecrets/${ref.id}`));
+        tx.delete(db.doc(`customerProofs/${ref.id}`));
       }); return res.json({ status: 'cancelled' });
     }
     if (action === 'saveVendor') {

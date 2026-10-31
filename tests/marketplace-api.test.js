@@ -54,6 +54,8 @@ test('reference submission cannot verify payment, including forged extra fields'
   assert.equal((await call({ uid: 'intruder', role: 'customer' }, 'submitPayment', { orderId: 'order1', reference: '123456789012' })).code, 404);
   assert.equal((await call(customer, 'submitPayment', { orderId: 'order1', reference: '123456789012', status: 'paid' })).code, 200);
   assert.equal(rows.get('orders/order1').status, 'awaiting_verification');
+  assert.ok(rows.get('orders/order1').submittedAt);
+  assert.equal(rows.get('orders/order1').history.at(-1).status, 'awaiting_verification');
   assert.equal((await call(customer, 'verifyPayment', { orderId: 'order1' })).code, 403);
 });
 test('bank verification requires matching credit, and refuses reference reuse', async () => {
