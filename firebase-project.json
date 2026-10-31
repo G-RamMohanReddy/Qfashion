@@ -2,5 +2,11 @@
   "environment": "staging",
   "projectId": "qfashion-staging-20261101",
   "webAppId": "1:10859700076:web:0eb3f7a7bfce72b9fd5d49",
-  "billingEnabledByThisChange": false
+  "billingEnabledByThisChange": false,
+  "firestore": {
+    "database": "(default)",
+    "location": "asia-south2",
+    "edition": "standard",
+    "freeTier": true
+  }
 }

@@ -4,16 +4,16 @@ Work only on feature/production-readiness. Production API access is intentionall
 
 ## Current state
 
-No Firebase staging project was created: the saved Firebase login returned invalid authentication credentials. Reauthenticate locally with `npx -y firebase-tools@latest login --reauth`, then create a separate staging project. Vercel project inspection also requires team authorization. No production resources were changed.
+Firebase account access and Vercel team access are verified. The new qfashion-staging-20261101 project and web app exist, with email/password and Google sign-in enabled. The default Standard Firestore database was verified in Delhi (asia-south2), freeTier=true. A CLI default initially created an empty US database; it was deleted and recreated in Delhi after explicit user approval. No existing Firebase project or production deployment was changed.
 
 The source includes email/password + Google login, email verification/reset/logout, a separate published-variant catalog, vendor draft/admin publication forms, transactional manual UPI ordering, bank-credit verification, manual courier assignment, fulfillment/delivery proof, full order export and aggregate order analysis. The sample catalog is explicitly preview-only and cannot enter the new checkout. WhatsApp catalog import is deferred. Initial checkout is one vendor at a time until commission/payout policy is decided.
 
 ## Configure the new Firebase project
 
-1. Create a new project and register a web app under the signed-in owner's account. Keep billing disabled initially. Decide the Firestore edition and region before provisioning; those choices need review because the database region is permanent. This implementation uses the native Firestore document/transaction Admin SDK.
+1. The separate staging project/web app and Standard native database are created. Keep billing disabled. firebase.json pins the approved Delhi region to prevent implicit CLI defaults. This implementation uses the native Firestore document/transaction Admin SDK.
 2. Enable email/password and Google sign-in. Set the authorized preview hostname and localhost; use the owner's chosen support email. Do not enable anonymous checkout.
 3. Add a `.firebaserc` staging alias locally, based on `.firebaserc.example`. Deploy only these rules/indexes to the verified staging project, never to an implicit/default target.
-4. Prototype rules deny all browser CRUD because the API performs validated, role-scoped reads and writes with Firebase Admin. Validate this with emulator tests before sharing broadly. No deployed rules were inspected or changed in this work.
+4. Prototype rules deny all browser CRUD because the API performs validated, role-scoped reads and writes with Firebase Admin. Validate this with emulator tests before sharing broadly. Restrictive rules were compiled and released only to the new staging project. Existing production rules were not inspected or changed.
 5. Configure a narrowly scoped staging service identity and its credentials directly in Vercel Preview variables (or replace the cert adapter with workload identity). Never commit the private key or paste it in chat. Bootstrap an administrator with a server-set custom claim `role: admin`. Vendors receive `role: vendor, vendorId: <id>`. Customers cannot assign roles.
 
 ## Preview environment variables
@@ -43,3 +43,9 @@ Run `npm test` and `npm run build`. Current tests include pure domain tests and 
 The dependency update removes reported high-severity findings; six moderate findings remain in Google SDK filesystem dependencies at the last audit. Review before production. Package versions are locked. Never use `npm audit fix --force` blindly.
 
 The Vite local server serves only the frontend. `/api/marketplace` runs as a Vercel function; use a configured Vercel preview to test the full flow. Production deployment needs a separate approved release after the remaining gates above are resolved.
+
+## Current preview
+
+Draft PR: https://github.com/G-RamMohanReddy/Qfashion/pull/1
+
+Vercel staging target: https://qfashion-2h8rifmv2-gudurirammohanreddy-1608.vercel.app (READY, commit e0ac3484ec737aa673917d9fa99213ef622a6ac4). Branch-specific Preview configuration points only to the new Firebase project. Manual UPI is disabled. Firebase Admin service credentials and Google Routes key/service zones remain unconfigured. Existing preview protection is retained.
