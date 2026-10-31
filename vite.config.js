@@ -8,7 +8,7 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   resolve: { alias: { '@': path.resolve(ROOT, 'src') } },
-  server: { port: 5173, host: true },
+  server: { port: 5173, host: '127.0.0.1' },
   build: {
     outDir: 'dist',
     chunkSizeWarningLimit: 1400,

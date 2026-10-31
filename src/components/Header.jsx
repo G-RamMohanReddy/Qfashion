@@ -1,9 +1,9 @@
 /** Standard marketplace header: logo, location, search, wishlist, cart, profile. */
 
 import { Search, ShoppingBag, Heart, User, X } from 'lucide-react';
-import LocationPicker from './LocationPicker.jsx';
+import { HUBS } from '@/data/seedData.js';
 
-export default function Header({ hubId, onHub, search, onSearch, cartCount, wishCount, onCart, onWishlist }) {
+export default function Header({ user, onAccount, onLogout, hubId, onHub, search, onSearch, cartCount, wishCount, onCart, onWishlist }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface shadow-card">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5 sm:px-5">
@@ -13,7 +13,7 @@ export default function Header({ hubId, onHub, search, onSearch, cartCount, wish
         </a>
 
         <div className="order-3 w-full lg:order-none lg:w-auto">
-          <LocationPicker hubId={hubId} onHub={onHub} />
+          <label className="text-xs text-muted">Preview neighbourhood<select value={hubId} onChange={event => onHub(event.target.value)} className="field mt-1 py-1.5" aria-label="Preview neighbourhood">{HUBS.map(hub => <option value={hub.id} key={hub.id}>{hub.name}</option>)}</select></label>
         </div>
 
         <div className="relative min-w-0 flex-1">
@@ -33,6 +33,7 @@ export default function Header({ hubId, onHub, search, onSearch, cartCount, wish
         </div>
 
         <nav className="flex shrink-0 items-center gap-1 sm:gap-3">
+          <a href="#about-us" className="px-2 text-xs font-bold text-muted">About us</a>
           <button onClick={onWishlist} className="relative flex flex-col items-center px-2 text-muted transition-colors hover:text-ink" aria-label="Open your wishlist">
             <Heart size={19} strokeWidth={1.9} />
             <span className="mt-0.5 hidden text-2xs font-bold sm:block">Wishlist</span>
@@ -49,10 +50,10 @@ export default function Header({ hubId, onHub, search, onSearch, cartCount, wish
             )}
           </button>
 
-          <span className="hidden flex-col items-center px-2 text-muted sm:flex" title="Signed in as Pragathi">
+          <button onClick={user ? onLogout : onAccount} className="flex flex-col items-center px-2 text-muted" title={user ? 'Sign out' : 'Sign in'}>
             <User size={19} strokeWidth={1.9} />
-            <span className="mt-0.5 text-2xs font-bold">Profile</span>
-          </span>
+            <span className="mt-0.5 text-2xs font-bold">{user ? 'Sign out' : 'Sign in'}</span>
+          </button>
         </nav>
       </div>
     </header>
