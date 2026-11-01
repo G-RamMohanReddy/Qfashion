@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import Header from './components/Header.jsx';
+import CatalogPreview from './components/CatalogPreview.jsx';
 import AboutUs from './components/AboutUs.jsx';
 import { isFirebaseConfigured } from '@/lib/firebase.js';
 const Marketplace = lazy(() => import('./components/Marketplace.jsx'));
@@ -23,16 +24,19 @@ function Garment({ kind = 'shirt' }) {
   </svg>;
 }
 export default function App({ user, role, onAccount, onLogout }) {
+  const [panel, setPanel] = useState(null);
+  const [counts, setCounts] = useState({ saved: 0, bag: 0 });
   return <div className="min-h-screen bg-canvas new-edit">
     <a className="skip-link" href="#main-content">Skip to content</a>
     <div className="launch-strip">GUWAHATI, WE’RE GETTING READY. <span>A new local fashion story.</span></div>
-    <Header user={user} onAccount={onAccount} onLogout={onLogout} />
+    <Header user={user} onAccount={onAccount} onLogout={onLogout} onPanel={setPanel} counts={counts} />
     <main id="main-content">
       <section className="launch-hero" aria-labelledby="hero-title">
-        <div className="launch-copy"><p className="eyebrow">Q FASHION / THE NEIGHBOURHOOD EDIT</p><h1 id="hero-title">Good style.<br />Closer to <em>home.</em></h1><p>A fresh perspective on the shops around you.<br />Made for your everyday. Inspired by Guwahati.</p><div className="hero-actions"><a href="#the-edit" className="btn-primary">Discover the edit ↗</a><button className="btn-quiet" onClick={user ? () => document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' }) : onAccount}>{user ? 'Open my account' : isFirebaseConfigured ? 'Join Q Fashion' : 'Account preview'} →</button></div><div className="launch-note"><span className="launch-dot" /> Preview is open · Shopping launches soon</div></div>
+        <div className="launch-copy"><p className="eyebrow">Q FASHION / THE NEIGHBOURHOOD EDIT</p><h1 id="hero-title">Good style.<br />Closer to <em>home.</em></h1><p>A fresh perspective on the shops around you.<br />Made for your everyday. Inspired by Guwahati.</p><div className="hero-actions"><a href="#collection" className="btn-primary">Explore the collection ↗</a><button className="btn-quiet" onClick={user ? () => document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' }) : onAccount}>{user ? 'Open my account' : isFirebaseConfigured ? 'Join Q Fashion' : 'Account preview'} →</button></div><div className="launch-note"><span className="launch-dot" /> Preview is open · Shopping launches soon</div></div>
         <div className="launch-art"><span className="art-index">THE FIRST CHAPTER / 01</span><span className="art-orbit" /><Garment /><span className="art-script">a little local,<br />a lot you.</span><span className="art-caption">AN ILLUSTRATED STYLE STUDY · NOT A PRODUCT FOR SALE</span></div>
       </section>
       <div className="values-strip"><span>LOCAL DISCOVERIES</span><span aria-hidden="true">✳</span><span>PERSONAL SUPPORT</span><span aria-hidden="true">✳</span><span>THOUGHTFUL DELIVERY</span></div>
+      <CatalogPreview panel={panel} onPanel={setPanel} onCounts={setCounts} onAccount={onAccount} />
       <section id="the-edit" className="page-section">
         <div className="section-heading"><div><p className="eyebrow">A GLIMPSE OF WHAT’S NEXT</p><h2>Find your kind of <em>everyday.</em></h2></div><p>Three moods. Plenty of possibilities.<br />A style preview while we curate the collection.</p></div>
         <div className="edit-grid">{edits.map(edit => <article key={edit.kind} className={'edit-card ' + edit.tone}><div className="edit-illustration"><span className="eyebrow">{edit.tag}</span><Garment kind={edit.kind} /><span className="illustration-label">STYLE ILLUSTRATION</span></div><div className="edit-caption"><h3>{edit.name}</h3><p>{edit.note}</p></div></article>)}</div>
