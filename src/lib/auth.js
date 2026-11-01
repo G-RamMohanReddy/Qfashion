@@ -6,6 +6,8 @@ export function authClient() {
     if (!app) throw new Error('Sign-in is not configured yet.');
     const sdk = await import('firebase/auth'), auth = sdk.getAuth(app);
     await sdk.setPersistence(auth, sdk.browserSessionPersistence);
+    await auth.authStateReady();
+    auth.languageCode = 'en';
     return { auth, sdk };
   })();
   return promise;
@@ -23,3 +25,5 @@ export async function api(action, data = {}) {
   return result;
 }
 
+
+export function emailContinueSettings() { return { url: window.location.origin + '/?account=1', handleCodeInApp: false }; }
