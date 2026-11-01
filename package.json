@@ -32,6 +32,9 @@
     "node": "24.x"
   },
   "overrides": {
-    "@grpc/grpc-js": "^1.13.6"
+    "@grpc/grpc-js": "^1.13.6",
+    "jwks-rsa": {
+      "jose": "^5.10.0"
+    }
   }
 }
