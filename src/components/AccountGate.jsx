@@ -46,7 +46,7 @@ export default function AccountGate() {
   return <main className="auth-shell">
     <section className="auth-story"><a href="/" className="wordmark">Q <span>FASHION</span></a><p className="eyebrow">THE NEIGHBOURHOOD EDIT</p><h1>Your city.<br />Your style.<br /><em>Your moment.</em></h1><p>Discover a new way to dress, from the shops around you.</p><div className="auth-orbit" aria-hidden="true">Q</div><span className="auth-caption">A LITTLE LOCAL. A LOT YOU.</span></section>
     <section className="auth-card"><p className="eyebrow">YOUR NEXT CHAPTER</p><h2>{mode === 'signup' ? 'A beautiful beginning.' : mode === 'reset' ? 'Find your way back.' : 'Welcome to your edit.'}</h2><p className="text-muted mb-6">{mode === 'signup' ? 'Create your Q Fashion account.' : mode === 'reset' ? 'We’ll send a password reset link.' : 'Sign in. Find something that feels like you.'}</p>
-      {!isFirebaseConfigured && <p className="notice">This preview is being configured. Explore the design below; checkout is unavailable.</p>}
+      {!isFirebaseConfigured && <p className="notice">Account setup is in progress. Sign-in and ordering are not open on this address yet. Explore Q Fashion or contact the founder for updates.</p>}
       <form onSubmit={submit} className="space-y-4">
         {mode === 'signup' && <label className="block">Your name<input required name="name" maxLength={80} autoComplete="name" className="field mt-2" /></label>}
         <label className="block">Email address<input required name="email" type="email" autoComplete="email" className="field mt-2" /></label>
@@ -59,3 +59,4 @@ export default function AccountGate() {
     </section>
   </main>;
 }
+

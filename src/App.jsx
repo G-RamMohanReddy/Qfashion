@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import Header from './components/Header.jsx';
 import AboutUs from './components/AboutUs.jsx';
+import { isFirebaseConfigured } from '@/lib/firebase.js';
 const Marketplace = lazy(() => import('./components/Marketplace.jsx'));
 const edits = [
   { name: 'The everyday edit', note: 'Easy layers. Uncomplicated days.', kind: 'shirt', tone: 'sage', tag: '01 / EVERYDAY' },
@@ -8,7 +9,7 @@ const edits = [
   { name: 'Finishing touches', note: 'Small details. Your signature.', kind: 'bag', tone: 'sand', tag: '03 / DETAILS' },
 ];
 const questions = [
-  ['Can I order now?', 'This is a preview of the new Q Fashion experience. The collection is being prepared and checkout is closed. You can explore the site, create an account, and contact the founder with questions.'],
+  ['Can I order now?', 'This is a preview of the new Q Fashion experience. The collection is being prepared and checkout is closed. You can explore the site and contact the founder with questions. Account availability is shown on the sign-in page.'],
   ['Where will Q Fashion deliver?', 'We are preparing a local launch in Guwahati. Eligible neighbourhoods, delivery charges and operating hours will be published before ordering opens.'],
   ['How will delivery work?', 'Q Fashion will arrange a local courier to collect and deliver your order. Your account will show confirmed order stages and an estimated arrival window, without a live rider map.'],
   ['How is the delivery estimate calculated?', 'The estimate includes preparation, packaging, the courier’s arrival at the shop, travel to you, and a buffer. Traffic and shop readiness can change the estimate; the timer does not confirm delivery.'],
@@ -28,7 +29,7 @@ export default function App({ user, role, onAccount, onLogout }) {
     <Header user={user} onAccount={onAccount} onLogout={onLogout} />
     <main id="main-content">
       <section className="launch-hero" aria-labelledby="hero-title">
-        <div className="launch-copy"><p className="eyebrow">Q FASHION / THE NEIGHBOURHOOD EDIT</p><h1 id="hero-title">Good style.<br />Closer to <em>home.</em></h1><p>A fresh perspective on the shops around you.<br />Made for your everyday. Inspired by Guwahati.</p><div className="hero-actions"><a href="#the-edit" className="btn-primary">Discover the edit ↗</a><button className="btn-quiet" onClick={user ? () => document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' }) : onAccount}>{user ? 'Open my account' : 'Join Q Fashion'} →</button></div><div className="launch-note"><span className="launch-dot" /> Preview is open · Shopping launches soon</div></div>
+        <div className="launch-copy"><p className="eyebrow">Q FASHION / THE NEIGHBOURHOOD EDIT</p><h1 id="hero-title">Good style.<br />Closer to <em>home.</em></h1><p>A fresh perspective on the shops around you.<br />Made for your everyday. Inspired by Guwahati.</p><div className="hero-actions"><a href="#the-edit" className="btn-primary">Discover the edit ↗</a><button className="btn-quiet" onClick={user ? () => document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' }) : onAccount}>{user ? 'Open my account' : isFirebaseConfigured ? 'Join Q Fashion' : 'Account preview'} →</button></div><div className="launch-note"><span className="launch-dot" /> Preview is open · Shopping launches soon</div></div>
         <div className="launch-art"><span className="art-index">THE FIRST CHAPTER / 01</span><span className="art-orbit" /><Garment /><span className="art-script">a little local,<br />a lot you.</span><span className="art-caption">AN ILLUSTRATED STYLE STUDY · NOT A PRODUCT FOR SALE</span></div>
       </section>
       <div className="values-strip"><span>LOCAL DISCOVERIES</span><span aria-hidden="true">✳</span><span>PERSONAL SUPPORT</span><span aria-hidden="true">✳</span><span>THOUGHTFUL DELIVERY</span></div>
@@ -40,7 +41,7 @@ export default function App({ user, role, onAccount, onLogout }) {
       <section className="delivery-story" id="delivery"><div><p className="eyebrow">FROM A LOCAL SHOP TO YOUR DOOR</p><h2>A personal touch.<br /><em>Every step of the way.</em></h2><p>We’re building delivery around clear updates and a person you can reach. Your order will move forward when each step is confirmed.</p><a href="#questions" className="text-sm underline underline-offset-4">How delivery will work →</a></div><ol className="delivery-steps">{[['01', 'Made ready for you', 'Preparation and packaging at the shop.'], ['02', 'Collected with care', 'Q Fashion arranges a local courier for pickup.'], ['03', 'On its way home', 'An estimated arrival window and confirmed order updates.']].map(([number, title, copy]) => <li key={number}><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></li>)}</ol></section>
       {user && <div id="your-account"><Suspense fallback={<p className="page-section" role="status">Opening your account…</p>}><Marketplace user={user} role={role} /></Suspense></div>}
       <section id="questions" className="page-section faq-section"><div><p className="eyebrow">BEFORE WE BEGIN</p><h2>A little more<br /><em>about Q.</em></h2><p>Something else on your mind?</p><a href="mailto:qfashion.shop1@gmail.com" className="btn-ghost mt-4">Talk to us ↗</a></div><div>{questions.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div></section>
-      {!user && <section className="join-banner"><p className="eyebrow">YOUR NEXT CHAPTER</p><h2>Make room for something <em>you.</em></h2><p>Create your account for the Q Fashion launch.</p><button className="btn-primary" onClick={onAccount}>Create your account →</button></section>}
+      {!user && <section className="join-banner"><p className="eyebrow">YOUR NEXT CHAPTER</p><h2>Make room for something <em>you.</em></h2><p>{isFirebaseConfigured ? 'Create your account for the Q Fashion launch.' : 'Our collection and accounts are being prepared. Meet the people behind Q Fashion.'}</p>{isFirebaseConfigured ? <button className="btn-primary" onClick={onAccount}>Create your account →</button> : <a className="btn-primary" href="#about-us">Meet Q Fashion →</a>}</section>}
     </main>
     <AboutUs />
   </div>;
