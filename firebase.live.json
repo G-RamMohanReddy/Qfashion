@@ -1,0 +1,7 @@
+{
+  "auth": {
+    "authorizedDomains": ["qfashion.shop", "www.qfashion.shop", "qfashion-live-20261101.firebaseapp.com"],
+    "providers": { "anonymous": false, "emailPassword": true, "googleSignIn": { "oAuthBrandDisplayName": "Q Fashion", "supportEmail": "qfashion.shop1@gmail.com" } }
+  },
+  "firestore": { "database": "(default)", "location": "asia-south2", "edition": "standard", "rules": "firestore.rules", "indexes": "firestore.indexes.json" }
+}

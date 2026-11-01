@@ -28,7 +28,7 @@ export const firebaseConfig = {
 };
 
 /** True when enough config is present to try connecting at all. */
-export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.projectId === import.meta.env.VITE_QF_STAGING_PROJECT_ID);
+export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.projectId === (import.meta.env.VITE_QF_FIREBASE_PROJECT_ID || import.meta.env.VITE_QF_STAGING_PROJECT_ID));
 
 let appPromise = null;
 

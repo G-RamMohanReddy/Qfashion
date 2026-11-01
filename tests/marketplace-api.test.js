@@ -7,7 +7,7 @@ import { createHandler } from '../api/marketplace.js';
 function harness(seed = {}) {
   const rows = new Map(Object.entries(seed));
   const snapshot = ref => ({ id: ref.id, exists: rows.has(ref.path), data: () => structuredClone(rows.get(ref.path)) });
-  const doc = path => ({ path, id: path.split('/').at(-1), get: async () => snapshot(doc(path)) });
+  const doc = path => ({ path, id: path.split('/').at(-1), get: async () => snapshot(doc(path)), set: async (data, options) => rows.set(path, options?.merge ? { ...rows.get(path), ...structuredClone(data) } : structuredClone(data)) });
   const db = {
     doc, getAll: async (...refs) => refs.map(snapshot),
     async runTransaction(fn) {
@@ -22,7 +22,7 @@ function harness(seed = {}) {
       const result = await fn(tx); writes.forEach(write => write()); return result;
     },
   };
-  const handler = createHandler({ getServices: () => ({ db, auth: {} }), authenticateUser: req => req.actor,
+  const handler = createHandler({ expireReservations: async () => {}, getServices: () => ({ db, auth: {} }), authenticateUser: req => req.actor,
     estimateRoute: async () => ({ total: 45, components: { prep: 10, packaging: 5, riderArrival: 10, travelDelivery: 15, buffer: 5 }, calculatedAt: Date.now() }) });
   const call = async (actor, action, data = {}) => {
     const response = { setHeader() {}, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
@@ -114,4 +114,23 @@ test('paid cancellation cannot clear a different active checkout and preserves r
   assert.equal((await call(administrator, 'cancel', { orderId: 'order1' })).code, 200);
   assert.equal(rows.get('activeCheckouts/customer1').orderId, 'new-order');
   assert.equal(rows.get('orders/order1').paymentStatus, 'refund_review');
+});
+
+test('profile writes cannot choose a role or another customer document', async () => {
+  const { rows, call } = harness();
+  assert.equal((await call(customer, 'profile')).role, 'customer');
+  assert.equal((await call(customer, 'saveProfile', { name: 'My name', phone: '9000000000', role: 'admin', uid: 'victim' })).code, 200);
+  assert.equal(rows.get('customers/customer1').name, 'My name');
+  assert.equal(rows.get('customers/customer1').role, undefined);
+  assert.equal(rows.has('customers/victim'), false);
+});
+test('saved addresses stay scoped to the caller and cannot exceed five', async () => {
+  const { rows, call } = harness();
+  for (let i = 0; i < 5; i++) assert.equal((await call(customer, 'saveAddress', { addressId: 'address' + i, address })).code, 200);
+  assert.equal((await call(customer, 'saveAddress', { addressId: 'address6', address })).code, 400);
+  const other = { uid: 'other', role: 'customer', email: 'other@example.invalid' };
+  await call(other, 'deleteAddress', { addressId: 'address0', uid: customer.uid });
+  assert.equal(rows.get('customers/customer1').addresses.length, 5);
+  assert.equal((await call(customer, 'deleteAddress', { addressId: 'address0' })).code, 200);
+  assert.equal(rows.get('customers/customer1').addresses.length, 4);
 });

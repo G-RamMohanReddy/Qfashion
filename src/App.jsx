@@ -25,12 +25,17 @@ function Garment({ kind = 'shirt' }) {
 }
 export default function App({ user, role, onAccount, onLogout }) {
   const [panel, setPanel] = useState(null);
+  const [accountTab, setAccountTab] = useState('profile');
+  const openAccount = (tab = 'profile') => { setAccountTab(tab); document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' }); };
+  const accountAction = user ? () => openAccount() : onAccount;
+  const openPanel = next => { if (user && next === 'orders') openAccount('orders'); else setPanel(next); };
   const [counts, setCounts] = useState({ saved: 0, bag: 0 });
   return <div className="min-h-screen bg-canvas new-edit">
     <a className="skip-link" href="#main-content">Skip to content</a>
     <div className="launch-strip">GUWAHATI, WE’RE GETTING READY. <span>A new local fashion story.</span></div>
-    <Header user={user} onAccount={onAccount} onLogout={onLogout} onPanel={setPanel} counts={counts} />
+    <Header user={user} onAccount={accountAction} onLogout={onLogout} onPanel={openPanel} counts={counts} />
     <main id="main-content">
+      {user && <div id="your-account"><Suspense fallback={<p className="page-section" role="status">Opening your account…</p>}><Marketplace user={user} role={role} activeTab={accountTab} onTabChange={setAccountTab} /></Suspense></div>}
       <section className="launch-hero" aria-labelledby="hero-title">
         <div className="launch-copy"><p className="eyebrow">Q FASHION / THE NEIGHBOURHOOD EDIT</p><h1 id="hero-title">Good style.<br />Closer to <em>home.</em></h1><p>A fresh perspective on the shops around you.<br />Made for your everyday. Inspired by Guwahati.</p><div className="hero-actions"><a href="#collection" className="btn-primary">Explore the collection ↗</a><button className="btn-quiet" onClick={user ? () => document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' }) : onAccount}>{user ? 'Open my account' : isFirebaseConfigured ? 'Join Q Fashion' : 'Account preview'} →</button></div><div className="launch-note"><span className="launch-dot" /> Preview is open · Shopping launches soon</div></div>
         <div className="launch-art"><span className="art-index">THE FIRST CHAPTER / 01</span><span className="art-orbit" /><Garment /><span className="art-script">a little local,<br />a lot you.</span><span className="art-caption">AN ILLUSTRATED STYLE STUDY · NOT A PRODUCT FOR SALE</span></div>
@@ -43,7 +48,7 @@ export default function App({ user, role, onAccount, onLogout }) {
         <p className="collection-note">The real collection is coming. These illustrations are inspiration; there are no items for sale yet.</p>
       </section>
       <section className="delivery-story" id="delivery"><div><p className="eyebrow">FROM A LOCAL SHOP TO YOUR DOOR</p><h2>A personal touch.<br /><em>Every step of the way.</em></h2><p>We’re building delivery around clear updates and a person you can reach. Your order will move forward when each step is confirmed.</p><a href="#questions" className="text-sm underline underline-offset-4">How delivery will work →</a></div><ol className="delivery-steps">{[['01', 'Made ready for you', 'Preparation and packaging at the shop.'], ['02', 'Collected with care', 'Q Fashion arranges a local courier for pickup.'], ['03', 'On its way home', 'An estimated arrival window and confirmed order updates.']].map(([number, title, copy]) => <li key={number}><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></li>)}</ol></section>
-      {user && <div id="your-account"><Suspense fallback={<p className="page-section" role="status">Opening your account…</p>}><Marketplace user={user} role={role} /></Suspense></div>}
+
       <section id="questions" className="page-section faq-section"><div><p className="eyebrow">BEFORE WE BEGIN</p><h2>A little more<br /><em>about Q.</em></h2><p>Something else on your mind?</p><a href="mailto:qfashion.shop1@gmail.com" className="btn-ghost mt-4">Talk to us ↗</a></div><div>{questions.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div></section>
       {!user && <section className="join-banner"><p className="eyebrow">YOUR NEXT CHAPTER</p><h2>Make room for something <em>you.</em></h2><p>{isFirebaseConfigured ? 'Create your account for the Q Fashion launch.' : 'Our collection and accounts are being prepared. Meet the people behind Q Fashion.'}</p>{isFirebaseConfigured ? <button className="btn-primary" onClick={onAccount}>Create your account →</button> : <a className="btn-primary" href="#about-us">Meet Q Fashion →</a>}</section>}
     </main>

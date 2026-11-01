@@ -1,7 +1,11 @@
-# Staging production-readiness work
+# Q Fashion
 
-This feature branch replaces the demo checkout with an authenticated, server-validated manual UPI workflow. It adds email/Google sign-in, catalog draft/publication forms, order retention and analytics/export, admin verification of bank credits, manual courier fulfillment and an animated delivery estimate. About Us lists founder G Ram Mohan Reddy and the supplied Q Fashion support contacts.
+The Guwahati storefront at https://qfashion.shop has an empty collection layout ready for the owner's catalog. Account, vendor/admin operations, order retention, manual UPI verification and Q Fashion-managed delivery run through an authenticated Vercel API and private Firestore database.
 
-**Not yet ready for live orders.** Firebase Admin server credentials, Google Routes configuration and service zones, emulator/cloud end-to-end tests, payment/fee policy and remaining dependency review are release gates. No production deployment is authorized. The legacy documentation below describes the original demo and must not be used as setup instructions for the new checkout. Follow [the staging guide](docs/STAGING.md).
+Live Firebase project: `qfashion-live-20261101`. Staging: `qfashion-staging-20261101`. Both use Standard Firestore in Delhi (`asia-south2`). Browser database access is denied; server APIs enforce identity, roles and ownership. Vercel uses Google Workload Identity Federation with short-lived credentials, scoped to this Vercel project and the correct environment. No service-account private key is required.
 
-Local frontend: Node 24, `npm ci`, `npm run dev`. Validation: `npm test`, `npm run build`. The API runs as a Vercel function and fails closed without separate staging credentials. Sample products cannot be purchased. Real WhatsApp catalog import is deferred.
+See [live operations](docs/LIVE.md), [staging history](docs/STAGING.md), and [security model](docs/security-model.md). The staging guide records the earlier setup; LIVE.md supersedes its staging-only restrictions for the user-authorized live release.
+
+Development: Node 24, `npm ci`, `npm run dev`. Checks: `npm test`, `npm run build`. The local Vite server does not run the API. Vercel environment variables must be configured separately for Preview and Production.
+
+Real products remain unpublished. Google Routes billing must be enabled and its connection tested before checkout opens. Manual UPI references are claims, not proof: Q Fashion must confirm the actual bank credit before fulfillment. There are no card simulations, cash on delivery, automated money transfers, or rider GPS tracking.

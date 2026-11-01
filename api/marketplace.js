@@ -1,6 +1,7 @@
 import { randomInt, createHash, timingSafeEqual } from 'node:crypto';
 import { AggregateField, FieldPath } from 'firebase-admin/firestore';
-import { services, authenticate } from '../server/admin.js';
+import { services, authenticate, routeAuthentication } from '../server/admin.js';
+import { releaseExpiredReservations } from '../server/reservations.js';
 import { UPI_ID, requireValue, text, integer, eta, upiLink, paymentReference, canTransition, validateAddress, quoteLines, withinDeliveryArea } from '../server/domain.js';
 
 const id = value => { requireValue(typeof value === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(value), 'Invalid identifier'); return value; };
@@ -9,7 +10,7 @@ const now = () => Date.now();
 const admin = actor => requireValue(actor.role === 'admin', 'Administrator access required', 403);
 const manualEnabled = () => requireValue(process.env.MANUAL_UPI_ENABLED === 'true' && Date.parse(process.env.MANUAL_UPI_UNTIL) > now(), 'Manual UPI checkout is paused or has expired', 503);
 // All operations are authenticated and all money/stock/state writes run here.
-export function createHandler({ getServices = services, authenticateUser = authenticate, estimateRoute = routeEstimate } = {}) {
+export function createHandler({ getServices = services, authenticateUser = authenticate, estimateRoute = routeEstimate, expireReservations = releaseExpiredReservations } = {}) {
 return async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
@@ -25,6 +26,54 @@ return async function handler(req, res) {
       requireValue(fresh || old.count < 60, 'Please try again in a minute', 429);
       tx.set(ref, { startedAt: fresh ? now() : old.startedAt, count: fresh ? 1 : old.count + 1 });
     });
+    if (['catalog', 'orders', 'checkout'].includes(action)) await expireReservations(db);
+    if (action === 'profile') {
+      const ref = db.doc(`customers/${actor.uid}`);
+      const profile = await db.runTransaction(async tx => {
+        const old = (await tx.get(ref)).data();
+        if (old) return old;
+        const record = { name: actor.name || 'Q Fashion member', email: actor.email, phone: '', addresses: [], createdAt: now(), updatedAt: now() };
+        tx.create(ref, record); return record;
+      });
+      return res.json({ profile, role: actor.role, vendorId: actor.vendorId });
+    }
+    if (action === 'saveProfile') {
+      const name = text(input.name, 80), phone = input.phone || '';
+      requireValue(phone === '' || /^[6-9][0-9]{9}$/.test(phone), 'Enter a valid mobile number');
+      await db.doc(`customers/${actor.uid}`).set({ name, phone, email: actor.email, updatedAt: now() }, { merge: true });
+      return res.json({ status: 'saved' });
+    }
+    if (action === 'saveAddress' || action === 'deleteAddress') {
+      const addressId = id(input.addressId), ref = db.doc(`customers/${actor.uid}`);
+      const address = action === 'saveAddress' ? validateAddress(input.address) : null;
+      await db.runTransaction(async tx => {
+        const old = (await tx.get(ref)).data() || { name: actor.name || 'Q Fashion member', email: actor.email, phone: '', createdAt: now() };
+        const addresses = (old.addresses || []).filter(item => item.id !== addressId);
+        if (address) { requireValue(addresses.length < 5, 'You can save up to five addresses'); addresses.push({ ...address, id: addressId }); }
+        tx.set(ref, { ...old, addresses, updatedAt: now() });
+      });
+      return res.json({ status: 'saved' });
+    }
+    if (action === 'setup') {
+      admin(actor);
+      const vendors = await db.collection('vendors').limit(100).get();
+      return res.json({ accountService: true, database: true, routesConfigured: process.env.GOOGLE_ROUTES_ENABLED === 'true' || Boolean(process.env.GOOGLE_MAPS_SERVER_KEY), manualUpiConfigured: process.env.MANUAL_UPI_ENABLED === 'true', manualUpiUntil: process.env.MANUAL_UPI_UNTIL || null, vendors: vendors.docs.map(d => ({ id: d.id, ...d.data() })) });
+    }
+    if (action === 'setTeamRole') {
+      admin(actor);
+      requireValue(['customer', 'vendor', 'rider'].includes(input.role), 'Choose a supported team role');
+      const email = text(input.email, 254).toLowerCase();
+      requireValue(email !== process.env.QF_ADMIN_EMAIL?.toLowerCase(), 'The founder account cannot be changed here', 403);
+      let target;
+      try { target = await auth.getUserByEmail(email); } catch { requireValue(false, 'Ask this person to create and verify their account first', 404); }
+      requireValue(target.emailVerified, 'This person must verify their account first');
+      let vendorId = null;
+      if (input.role === 'vendor') { vendorId = id(input.vendorId); requireValue((await db.doc(`vendors/${vendorId}`).get()).exists, 'Create this vendor record first'); }
+      await auth.setCustomUserClaims(target.uid, { ...target.customClaims, role: input.role, vendorId });
+      await auth.revokeRefreshTokens(target.uid);
+      await db.collection('teamAudit').add({ targetUid: target.uid, role: input.role, vendorId, changedBy: actor.uid, changedAt: now() });
+      return res.json({ status: 'saved', message: 'Team access updated. Ask this person to sign in again.' });
+    }
     if (action === 'catalog') {
       const snap = await db.collection('variants').where('published', '==', true).limit(200).get();
       // Explicit public projection: do not leak inventory or settlement metadata.
@@ -111,7 +160,7 @@ return async function handler(req, res) {
           history: [{ status: 'awaiting_payment', ts: now(), actor: actor.uid }] };
         current.forEach((line, i) => tx.update(refs[i], { stock: fresh[i].data().stock - line.qty }));
         tx.create(orderRef, order);
-        tx.set(activeRef, { orderId: checkoutId });
+        tx.set(activeRef, { orderId: checkoutId, expiresAt: order.expiresAt });
         return { id: checkoutId, ...order };
       });
       requireValue(result.status === 'awaiting_payment' && result.expiresAt > now(), 'Checkout is no longer payable', 409);
@@ -242,10 +291,10 @@ return async function handler(req, res) {
 export default createHandler();
 
 async function routeEstimate(vendor, address) {
-  requireValue(process.env.GOOGLE_MAPS_SERVER_KEY, 'Delivery routes are not configured', 503);
+  const routeHeaders = await routeAuthentication();
   const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
     method: 'POST', signal: AbortSignal.timeout(10000),
-    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': process.env.GOOGLE_MAPS_SERVER_KEY, 'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters' },
+    headers: { 'Content-Type': 'application/json', ...routeHeaders, 'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters' },
     body: JSON.stringify({ origin: { location: { latLng: { latitude: vendor.pickup.lat, longitude: vendor.pickup.lng } } }, destination: { location: { latLng: { latitude: address.lat, longitude: address.lng } } }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE' }),
   });
   requireValue(response.ok, 'Could not estimate the delivery route. Try later', 503);
