@@ -1,6 +1,6 @@
 /** Display formatting. */
 
-export const inr = (n) => '₹' + Math.round(Number(n) || 0).toLocaleString('en-IN');
+export const inr = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 export const cx = (...p) => p.filter(Boolean).join(' ');
 
 export function timeAgo(ts) {

@@ -1,0 +1,7 @@
+{
+  "indexes": [
+    { "collectionGroup": "orders", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "totalPaise", "order": "ASCENDING" }] },
+    { "collectionGroup": "orders", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "paymentStatus", "order": "ASCENDING" }, { "fieldPath": "totalPaise", "order": "ASCENDING" }] }
+  ],
+  "fieldOverrides": []
+}

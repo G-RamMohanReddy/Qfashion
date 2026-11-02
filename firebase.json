@@ -1,0 +1,36 @@
+{
+  "auth": {
+    "authorizedDomains": [
+      "localhost",
+      "qfashion-staging-20261101.firebaseapp.com",
+      "qfashion-2h8rifmv2-gudurirammohanreddy-1608.vercel.app",
+      "qfashion-git-feature-production-b3a310-gudurirammohanreddy-1608.vercel.app"
+    ],
+    "providers": {
+      "anonymous": false,
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Q Fashion Staging",
+        "supportEmail": "qfashion.shop1@gmail.com"
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "asia-south2",
+    "edition": "standard",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    }
+  }
+}
