@@ -14,8 +14,9 @@ const questions = [
   ['Where will Q Fashion deliver?', 'We are preparing a local launch in Guwahati. Eligible neighbourhoods, delivery charges and operating hours will be published before ordering opens.'],
   ['How will delivery work?', 'Q Fashion will arrange a local courier to collect and deliver your order. Your account will show confirmed order stages and an estimated arrival window, without a live rider map.'],
   ['How is the delivery estimate calculated?', 'The estimate includes preparation, packaging, the courier’s arrival at the shop, travel to you, and a buffer. Traffic and shop readiness can change the estimate; the timer does not confirm delivery.'],
-  ['How will payments work?', 'When checkout opens, you will review the total before paying online. For the planned initial UPI flow, a submitted reference stays pending until Q Fashion confirms the actual bank credit. Never share your UPI PIN or bank OTP.'],
-  ['What about returns or cancellations?', 'Our launch policy is being finalised and will be available before ordering opens. For now, ask us about an item or the upcoming service by phone or email.'],
+  ['How will payments work?', 'Checkout is online only. You pay for the items and local delivery together. The delivery fee is shown separately before payment. For the planned initial UPI flow, a submitted reference stays pending until Q Fashion confirms the actual bank credit. Never share your UPI PIN or bank OTP.'],
+  ['How do I request a return or exchange?', 'Email qfashion.shop1@gmail.com with your order ID and item within 24 hours of delivery. Return the original garment you received, unwashed, with its tags attached and intact. We cannot accept substitutes. You pay the courier fee for a return or exchange. We will confirm the fee with you before arranging pickup. If you received a wrong or faulty item, contact us for help.'],
+  ['Who is Q Fashion for?', 'Our collection welcomes shoppers of every age and gender.'],
 ];
 function Garment({ kind = 'shirt' }) {
   return <svg viewBox="0 0 320 360" fill="none" aria-hidden="true" className={'garment garment-' + kind}>

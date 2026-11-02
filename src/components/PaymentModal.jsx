@@ -23,7 +23,7 @@ export default function PaymentModal({ open, checkout, onClose, onSuccess }) {
   return <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/60" role="dialog" aria-modal="true" aria-label="Pay with UPI">
     <section className="payment-card bg-surface rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-auto">
       <header className="flex justify-between items-center"><p className="eyebrow">Q FASHION · ONLINE PAYMENT</p><button disabled={busy} onClick={onClose} aria-label="Close payment"><X size={20} /></button></header>
-      <h2 className="font-editorial text-3xl mt-4">Your edit, almost yours.</h2><p className="text-2xl num mt-3">{inr(order.totalPaise / 100)}</p><p className="text-sm text-muted mt-2">Pay the exact amount once. We’ll verify the credit before preparing your order.</p>
+      <h2 className="font-editorial text-3xl mt-4">Your edit, almost yours.</h2><p className="text-sm mt-3">Items · {inr((order.totalPaise - (order.deliveryFeePaise || 0)) / 100)}<br />Local delivery · {inr((order.deliveryFeePaise || 0) / 100)}</p><p className="text-2xl num mt-3">Total · {inr(order.totalPaise / 100)}</p><p className="text-sm text-muted mt-2">Pay the exact amount once. We’ll verify the credit before preparing your order.</p>
       {qr && <img src={qr} alt={'UPI payment QR for ' + order.payee} className="mx-auto my-4 w-52 h-52" />}
       <p className="text-center font-bold break-all">{order.payee}</p><a href={upiUri} className="btn-primary w-full my-3">Open UPI app</a>
       <p className="notice">Check the recipient in your UPI app. If the name is unexpected, stop and contact Q Fashion. Closing this sheet does not cancel a bank payment.</p>

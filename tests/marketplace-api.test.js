@@ -34,7 +34,7 @@ function harness(seed = {}) {
 const customer = { uid: 'customer1', role: 'customer', email: 'test@example.invalid' };
 const administrator = { uid: 'admin1', role: 'admin' };
 const address = { name: 'Test Customer', line: 'Test delivery address', phone: '9177595164', pincode: '500001', lat: 17.4, lng: 78.5 };
-const vendor = { name: 'Test Vendor', active: true, pincodes: ['500001'], pickup: address, radiusKm: 10 };
+const vendor = { name: 'Test Vendor', deliveryFeePaise: 3500, active: true, pincodes: ['500001'], pickup: address, radiusKm: 10 };
 const variant = { vendorId: 'vendor1', name: 'Dress', size: 'M', color: 'Green', pricePaise: 99900, stock: 2, published: true };
 const data = () => ({ 'vendors/vendor1': vendor, 'variants/sku1': variant });
 const order = overrides => ({ uid: customer.uid, vendorId: 'vendor1', vendorName: vendor.name, items: [{ variantId: 'sku1', qty: 1 }], totalPaise: 99900, status: 'awaiting_verification', paymentStatus: 'awaiting_verification', submittedReference: '123456789012', history: [], expiresAt: Date.now() + 60000, ...overrides });
@@ -45,7 +45,7 @@ test('checkout snapshots authoritative amounts and reserves once under retry', a
   const payload = { checkoutId: 'checkout1', address, lines: [{ variantId: 'sku1', qty: 1, pricePaise: 1 }] };
   const first = await call(customer, 'checkout', payload), retry = await call(customer, 'checkout', payload);
   assert.equal(first.code, 200); assert.equal(retry.code, 200);
-  assert.equal(first.order.totalPaise, 99900); assert.equal(first.order.paymentStatus, 'pending');
+  assert.equal(first.order.deliveryFeePaise, 3500); assert.equal(first.order.totalPaise, 103400); assert.equal(Number(new URL(first.upiUri).searchParams.get('am')), 1034); assert.equal(first.order.paymentStatus, 'pending');
   assert.equal(rows.get('variants/sku1').stock, 1); assert.equal(rows.get('orders/checkout1').customer.email, customer.email);
   assert.equal((await call(customer, 'checkout', { ...payload, checkoutId: 'checkout2' })).code, 409);
 });

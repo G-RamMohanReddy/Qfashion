@@ -152,10 +152,13 @@ return async function handler(req, res) {
         requireValue(JSON.stringify(currentVendor.data()) === JSON.stringify(vendor), 'Delivery settings changed. Try again', 409);
         const fresh = await tx.getAll(...refs), current = quoteLines(lines, fresh.map(s => s.data()));
         requireValue(JSON.stringify(current) === JSON.stringify(items), 'Prices changed. Review your bag', 409);
-        const totalPaise = current.reduce((s, i) => s + i.pricePaise * i.qty, 0);
+        const deliveryFeePaise = vendor.deliveryFeePaise;
+        requireValue(Number.isSafeInteger(deliveryFeePaise) && deliveryFeePaise > 0, "Delivery fee is not set for this shop yet", 409);
+        const itemsTotalPaise = current.reduce((s, i) => s + i.pricePaise * i.qty, 0);
+        const totalPaise = itemsTotalPaise + deliveryFeePaise;
         requireValue(totalPaise <= 10000000, 'Order exceeds limit');
         const order = { uid: actor.uid, customer: { uid: actor.uid, email: actor.email || null, name: address.name, phone: address.phone }, vendorId: vendorIds[0], vendorName: text(vendor.name, 100), vendorSnapshot: vendor, items: current, address,
-          totalPaise, currency: 'INR', payee: UPI_ID, paymentMethod: 'manual_upi', priceIncludesTax: true, deliveryFeePaise: 0, packagingFeePaise: 0, status: 'awaiting_payment', paymentStatus: 'pending',
+          totalPaise, currency: 'INR', payee: UPI_ID, paymentMethod: 'manual_upi', priceIncludesTax: true, itemsTotalPaise, deliveryFeePaise, packagingFeePaise: 0, status: 'awaiting_payment', paymentStatus: 'pending',
           riderId: null, eta: timings, createdAt: now(), updatedAt: now(), expiresAt: now() + 30 * 60000,
           history: [{ status: 'awaiting_payment', ts: now(), actor: actor.uid }] };
         current.forEach((line, i) => tx.update(refs[i], { stock: fresh[i].data().stock - line.qty }));
@@ -251,7 +254,7 @@ return async function handler(req, res) {
       requireValue(v && Array.isArray(v.pincodes) && v.pincodes.length <= 50 && v.pincodes.every(p => /^[1-9][0-9]{5}$/.test(p)), 'Invalid service pincodes');
       const pickup = validateAddress(v.pickup);
       const timings = { prep: integer(v.prep, 0, 120), packaging: integer(v.packaging, 0, 120), riderArrival: integer(v.riderArrival, 0, 120), buffer: integer(v.buffer, 0, 120) };
-      await db.doc(`vendors/${id(v.id)}`).set({ name: text(v.name, 100), active: v.active === true, pincodes: v.pincodes, radiusKm: integer(v.radiusKm, 1, 50), pickup, ...timings, updatedAt: now() });
+      await db.doc(`vendors/${id(v.id)}`).set({ name: text(v.name, 100), active: v.active === true, pincodes: v.pincodes, radiusKm: integer(v.radiusKm, 1, 50), pickup, deliveryFeePaise: integer(v.deliveryFeePaise, 1, 10000000), ...timings, updatedAt: now() });
       return res.json({ status: 'saved' });
     }
     if (action === 'recordRefund') {
