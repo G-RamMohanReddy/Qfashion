@@ -53,7 +53,15 @@ export default function App({ user, role, onAccount, onLogout }) {
       <section className="delivery-story" id="delivery"><div><p className="eyebrow">FROM A LOCAL SHOP TO YOUR DOOR</p><h2>A personal touch.<br /><em>Every step of the way.</em></h2><p>We’re building delivery around clear updates and a person you can reach. Your order will move forward when each step is confirmed.</p><a href="#questions" className="text-sm underline underline-offset-4">How delivery will work →</a></div><ol className="delivery-steps">{[['01', 'Made ready for you', 'Preparation and packaging at the shop.'], ['02', 'Collected with care', 'Q Fashion arranges a local courier for pickup.'], ['03', 'On its way home', 'An estimated arrival window and confirmed order updates.']].map(([number, title, copy]) => <li key={number}><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></li>)}</ol></section>
 
       <section id="questions" className="page-section faq-section"><div><p className="eyebrow">BEFORE WE BEGIN</p><h2>A little more<br /><em>about Q.</em></h2><p>Something else on your mind?</p><a href="mailto:qfashion.shop1@gmail.com" className="btn-ghost mt-4">Talk to us ↗</a></div><div>{questions.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div></section>
-      {!user && <section className="join-banner"><p className="eyebrow">YOUR NEXT CHAPTER</p><h2>Make room for something <em>you.</em></h2><p>{isFirebaseConfigured ? 'Create your account for the Q Fashion launch.' : 'Our collection and accounts are being prepared. Meet the people behind Q Fashion.'}</p>{isFirebaseConfigured ? <button className="btn-primary" onClick={onAccount}>Create your account →</button> : <a className="btn-primary" href="#about-us">Meet Q Fashion →</a>}</section>}
+      <section id="ordering-guide" className="page-section" aria-labelledby="ordering-guide-title">
+        <div className="section-heading"><div><p className="eyebrow">SHOPPING WITH Q FASHION</p><h2 id="ordering-guide-title">How to <em>order.</em></h2></div><p>Browse and build an estimate now. Online orders open after delivery and payment setup is complete.</p></div>
+        <ol className="grid gap-4 md:grid-cols-3">
+          <li className="card p-5"><h3 className="font-bold">Choose your size</h3><p className="text-sm mt-2">Open a BS Menz item and swipe through its photos. Select an available size and add it to your basket estimate.</p></li>
+          <li className="card p-5"><h3 className="font-bold">Check the total</h3><p className="text-sm mt-2">The estimate shows item prices, GST and platform fees. Delivery is ₹100 for one item and free for two or more.</p></li>
+          <li className="card p-5"><h3 className="font-bold">Confirm delivery before paying</h3><p className="text-sm mt-2">When checkout opens, enter your delivery address and review the final total before paying online.</p></li>
+        </ol>
+        <a href="#collection" className="btn-primary mt-6">Back to the BS Menz collection</a>
+      </section>
     </main>
     <AboutUs />
   </div>;

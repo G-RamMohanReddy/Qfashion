@@ -406,5 +406,248 @@
         "stock": 1
       }
     ]
+  },
+  {
+    "id": "BSM-VEST06",
+    "name": "White Football Graphic Dot Knit Vest",
+    "color": "White",
+    "type": "Vests",
+    "fabric": "Dot knit",
+    "sellPrice": 200,
+    "styling": false,
+    "photos": {
+      "front": "/bs-menz/BSM-VEST06-front.jpeg",
+      "back": "/bs-menz/BSM-VEST06-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-VEST06-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST06-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST06-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST06-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-VEST07",
+    "name": "Yellow Football Graphic Dot Knit Vest",
+    "color": "Yellow",
+    "type": "Vests",
+    "fabric": "Dot knit",
+    "sellPrice": 200,
+    "styling": false,
+    "photos": {
+      "front": "/bs-menz/BSM-VEST07-front.jpeg",
+      "back": "/bs-menz/BSM-VEST07-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-VEST07-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST07-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST07-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST07-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-VEST08",
+    "name": "Grey Football Graphic Dot Knit Vest",
+    "color": "Grey",
+    "type": "Vests",
+    "fabric": "Dot knit",
+    "sellPrice": 200,
+    "styling": false,
+    "photos": {
+      "front": "/bs-menz/BSM-VEST08-front.jpeg",
+      "back": "/bs-menz/BSM-VEST08-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-VEST08-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST08-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST08-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST08-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-VEST09",
+    "name": "Red Football Graphic Dot Knit Vest",
+    "color": "Red",
+    "type": "Vests",
+    "fabric": "Dot knit",
+    "sellPrice": 200,
+    "styling": false,
+    "photos": {
+      "front": "/bs-menz/BSM-VEST09-front.jpeg",
+      "back": "/bs-menz/BSM-VEST09-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-VEST09-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST09-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST09-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST09-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-VEST10",
+    "name": "Black Football Graphic Dot Knit Vest",
+    "color": "Black",
+    "type": "Vests",
+    "fabric": "Dot knit",
+    "sellPrice": 200,
+    "styling": false,
+    "photos": {
+      "front": "/bs-menz/BSM-VEST10-front.jpeg",
+      "back": "/bs-menz/BSM-VEST10-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-VEST10-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST10-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST10-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST10-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-SWEAT01",
+    "name": "Black Crewneck Sweatshirt",
+    "color": "Black",
+    "type": "Sweatshirts",
+    "fabric": null,
+    "sellPrice": 699,
+    "styling": false,
+    "photos": {
+      "front": "/bs-menz/BSM-SWEAT01-front.jpeg",
+      "back": "/bs-menz/BSM-SWEAT01-back.jpeg"
+    },
+    "variants": []
+  },
+  {
+    "id": "BSM-SWEAT02",
+    "name": "Blue Crewneck Sweatshirt",
+    "color": "Blue",
+    "type": "Sweatshirts",
+    "fabric": null,
+    "sellPrice": 699,
+    "styling": false,
+    "photos": {
+      "back": "/bs-menz/BSM-SWEAT02-back.jpeg"
+    },
+    "variants": []
+  },
+  {
+    "id": "BSM-SWEAT03",
+    "name": "Red Crewneck Sweatshirt",
+    "color": "Red",
+    "type": "Sweatshirts",
+    "fabric": null,
+    "sellPrice": 699,
+    "styling": false,
+    "photos": {
+      "front": "/bs-menz/BSM-SWEAT03-front.jpeg"
+    },
+    "variants": []
+  },
+  {
+    "id": "BSM-SWEAT04",
+    "name": "Grey Crewneck Sweatshirt",
+    "color": "Grey",
+    "type": "Sweatshirts",
+    "fabric": null,
+    "sellPrice": 699,
+    "styling": false,
+    "photos": {
+      "front": "/bs-menz/BSM-SWEAT04-front.jpeg",
+      "back": "/bs-menz/BSM-SWEAT04-back.jpeg"
+    },
+    "variants": []
+  },
+  {
+    "id": "BSM-SWEAT05",
+    "name": "White Crewneck Sweatshirt",
+    "color": "White",
+    "type": "Sweatshirts",
+    "fabric": null,
+    "sellPrice": 699,
+    "styling": false,
+    "photos": {
+      "front": "/bs-menz/BSM-SWEAT05-front.jpeg",
+      "back": "/bs-menz/BSM-SWEAT05-back.jpeg"
+    },
+    "variants": []
   }
 ]
