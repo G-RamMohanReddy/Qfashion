@@ -3,6 +3,23 @@ import products from '../data/bs-menz.json';
 import darkwolves from '../data/darkwolves.json';
 import { inr } from '../lib/format.js';
 
+const catalog = [...darkwolves, ...products];
+const categories = {
+  'T-shirts': ['Oversized tees', 'Boxy tees'],
+  Vests: ['Vests'],
+  Sweatshirts: ['Sweatshirts'],
+  Hoodies: ['Hoodies'],
+};
+const productGroups = Object.entries(categories).map(([label, types]) => [
+  label,
+  catalog.filter(product => types.includes(product.type)),
+]);
+const mixedCatalog = Array.from(
+  { length: Math.max(...productGroups.map(([, group]) => group.length)) },
+  (_, index) => productGroups.flatMap(([, group]) => group.slice(index, index + 1)),
+).flat();
+const featuredProducts = productGroups.flatMap(([, group]) => group.slice(-1));
+
 function estimate(items) {
   const itemPaise = items.reduce((sum, item) => sum + item.sellPrice * 100, 0);
   const gstPaise = Math.round(itemPaise * 0.05);
@@ -203,7 +220,7 @@ function readBasket() {
   try {
     const skus = JSON.parse(sessionStorage.getItem(basketKey) || '[]');
     if (!Array.isArray(skus)) return [];
-    return [...products, ...darkwolves].flatMap(product => product.variants
+    return catalog.flatMap(product => product.variants
       .filter(variant => variant.stock !== 0 && skus.includes(variant.sku))
       .map(({ sku, size }) => ({ sku, size, name: product.name, type: product.type, sellPrice: product.sellPrice })));
   } catch {
@@ -276,10 +293,10 @@ function BasketDialog({ basket, onRemove, onClose }) {
   </dialog>;
 }
 
-function ProductCards({ products, onSelect }) {
+function ProductCards({ products, onSelect, alternatePhotos = false }) {
   return <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
       {products.map(product => <button type="button" key={product.id} className="card flex min-w-0 flex-col overflow-hidden text-left transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={() => onSelect(product)}>
-        <img className="aspect-[4/5] w-full border-b border-line bg-white object-contain" src={product.photos.front || product.photos.back} alt="" loading="lazy" />
+        <img className="aspect-[4/5] w-full border-b border-line bg-white object-contain" src={(alternatePhotos && (product.photos.angle || product.photos.back)) || product.photos.front || product.photos.back} alt="" loading="lazy" />
         <div className="flex flex-1 flex-col p-3 sm:p-4">
           <p className="mb-2 flex items-center gap-2 text-xs text-muted">
             <span aria-hidden="true" className="h-4 w-4 shrink-0 rounded-full border border-black/25" style={{ backgroundColor: colourSwatches[product.color] }} />
@@ -289,6 +306,7 @@ function ProductCards({ products, onSelect }) {
           <p className="mb-2 mt-1 text-xs leading-relaxed text-muted">
             {product.fabric || productTypes[product.type]} · {product.variants.map(variant => variant.size).join(', ')}
           </p>
+          <p className="mb-2 text-xs text-muted">{product.retailer || 'BS Menz Shop'}</p>
           <p className="mt-auto text-xl font-bold leading-tight tracking-tight sm:text-2xl">{inr(product.sellPrice)}</p>
           <p className="mt-1 text-xs font-semibold">Free delivery on 2+ items</p>
           <p className="text-xs text-muted">₹100 delivery for one item</p>
@@ -309,13 +327,14 @@ export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBag
   function addItems(items) {
     setBasket(current => current.some(row => items.some(item => item.sku === row.sku)) ? current : [...current, ...items]);
   }
-  const shown = type === 'All' ? products : products.filter(product => product.type === type);
-  return <section className="page-section collection-section" id="collection" aria-labelledby="bs-menz-title">
-    <div className="section-heading"><div><p className="eyebrow">BS MENZ SHOP</p><h2 id="bs-menz-title">The streetwear <em>collection.</em></h2></div><p>Oversized tees, dot knit vests and sweatshirts.</p></div>
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-      <p>₹100 delivery for one item. Free delivery on orders of two or more items.</p>
-      <a className="underline underline-offset-4" href="#darkwolves">Browse Darkwolves ↓</a>
+  const shown = type === 'All' ? mixedCatalog : catalog.filter(product => categories[type].includes(product.type));
+  return <section className="page-section collection-section" id="collection" aria-labelledby="collection-title">
+    <span id="darkwolves" className="block scroll-mt-24" aria-hidden="true" />
+    <div className="section-heading">
+      <div><h2 id="collection-title">Shop the <em>collection.</em></h2></div>
+      <p>Tees, vests, sweatshirts and hoodies from Guwahati’s local shops.</p>
     </div>
+    <p className="mb-4 text-sm">₹100 delivery for one item. Free delivery on orders of two or more items.</p>
     {basket.length > 0 && <section className="card p-4 mb-5" aria-labelledby="bs-estimate-title">
       <h3 className="font-bold mb-2" id="bs-estimate-title">Basket estimate ({basket.length})</h3>
       <ul className="space-y-2 mb-3">{basket.map(item => <li key={item.sku} className="flex gap-3 justify-between text-sm">
@@ -327,22 +346,19 @@ export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBag
       <button type="button" className="btn-primary mt-3" onClick={onOpenBag}>Review bag and delivery</button>
     </section>}
     <div className="flex flex-wrap gap-2 mb-5" aria-label="Filter products">
-      {['All', 'Oversized tees', 'Vests', 'Sweatshirts'].map(option => <button type="button" key={option} aria-pressed={type === option} className={type === option ? 'chip chip-on' : 'chip'} onClick={() => setType(option)}>{option}</button>)}
+      {['All', ...Object.keys(categories)].map(option => <button type="button" key={option} aria-pressed={type === option} className={type === option ? 'chip chip-on' : 'chip'} onClick={() => setType(option)}>{option}</button>)}
     </div>
     <ProductCards products={shown} onSelect={setSelected} />
+    {type === 'All' && <section className="mt-10" aria-labelledby="featured-styles">
+      <h3 id="featured-styles" className="font-editorial text-3xl mb-4">Featured styles</h3>
+      <ProductCards products={featuredProducts} onSelect={setSelected} alternatePhotos />
+    </section>}
     <section className="mt-10" aria-labelledby="bs-combos">
       <h3 id="bs-combos" className="font-editorial text-3xl mb-2">BS Menz combos</h3>
       <p className="text-sm mb-4">Choose a size for each piece. Every combo saves ₹100 on delivery.</p>
       <div className="grid gap-4 md:grid-cols-3">
         {combos.map(combo => <ComboCard key={combo.name} combo={combo} basket={basket} onAdd={addItems} />)}
       </div>
-    </section>
-    <section className="mt-12 scroll-mt-24" id="darkwolves" aria-labelledby="darkwolves-title">
-      <div className="section-heading">
-        <div><p className="eyebrow">DARKWOLVES · AMINGAON</p><h2 id="darkwolves-title">Boxy tees and <em>clasp hoodies.</em></h2></div>
-        <p>250 GSM cotton tees and 450 GSM hoodies from Khoka Market.</p>
-      </div>
-      <ProductCards products={darkwolves} onSelect={setSelected} />
     </section>
     {bagOpen && <BasketDialog basket={basket} onRemove={removeItem} onClose={onCloseBag} />}
     {selected && <ProductDialog key={selected.id} product={selected} basket={basket}

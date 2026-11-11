@@ -5,13 +5,8 @@ import CatalogPreview from './components/CatalogPreview.jsx';
 import AboutUs from './components/AboutUs.jsx';
 import { isFirebaseConfigured } from '@/lib/firebase.js';
 const Marketplace = lazy(() => import('./components/Marketplace.jsx'));
-const edits = [
-  { name: 'The everyday edit', note: 'Easy layers. Uncomplicated days.', kind: 'shirt', tone: 'sage', tag: '01 / EVERYDAY' },
-  { name: 'A little occasion', note: 'For the moments you dress up for.', kind: 'dress', tone: 'clay', tag: '02 / OCCASION' },
-  { name: 'Finishing touches', note: 'Small details. Your signature.', kind: 'bag', tone: 'sand', tag: '03 / DETAILS' },
-];
 const questions = [
-  ['Can I order now?', 'Browse the BS Menz Shop and Darkwolves collections and view the available size range. Ordering opens after final prices and delivery coverage are confirmed.'],
+  ['Can I order now?', 'Browse the collection and check the available sizes for each item. Ordering opens after final prices and delivery coverage are confirmed.'],
   ['Where will Q Fashion deliver?', 'We are preparing a local launch in Guwahati. Eligible neighbourhoods, delivery charges and operating hours will be published before ordering opens.'],
   ['How will delivery work?', 'Q Fashion will arrange a local courier to collect and deliver your order. Your account will show confirmed order stages and an estimated arrival window, without a live rider map.'],
   ['How is the delivery estimate calculated?', 'The estimate includes preparation, packaging, the courier’s arrival at the shop, travel to you, and a buffer. Traffic and shop readiness can change the estimate; the timer does not confirm delivery.'],
@@ -46,11 +41,6 @@ export default function App({ user, role, onAccount, onLogout }) {
       <div className="values-strip"><span>LOCAL DISCOVERIES</span><span aria-hidden="true">✳</span><span>PERSONAL SUPPORT</span><span aria-hidden="true">✳</span><span>THOUGHTFUL DELIVERY</span></div>
       <BsMenzCollection bagOpen={panel === 'bag'} onOpenBag={() => setPanel('bag')} onCloseBag={() => setPanel(null)} onBagCount={setBagCount} />
       <CatalogPreview panel={panel === 'bag' ? null : panel} onPanel={setPanel} onCounts={setCounts} onAccount={onAccount} hideCollection />
-      <section id="the-edit" className="page-section">
-        <div className="section-heading"><div><p className="eyebrow">A GLIMPSE OF WHAT’S NEXT</p><h2>Find your kind of <em>everyday.</em></h2></div><p>Three moods. Plenty of possibilities.<br />A style preview while we curate the collection.</p></div>
-        <div className="edit-grid">{edits.map(edit => <article key={edit.kind} className={'edit-card ' + edit.tone}><div className="edit-illustration"><span className="eyebrow">{edit.tag}</span><Garment kind={edit.kind} /><span className="illustration-label">STYLE ILLUSTRATION</span></div><div className="edit-caption"><h3>{edit.name}</h3><p>{edit.note}</p></div></article>)}</div>
-        <p className="collection-note">These illustrations are styling inspiration. Browse the BS Menz Shop and Darkwolves collections above.</p>
-      </section>
       <section className="delivery-story" id="delivery"><div><p className="eyebrow">FROM A LOCAL SHOP TO YOUR DOOR</p><h2>A personal touch.<br /><em>Every step of the way.</em></h2><p>We’re building delivery around clear updates and a person you can reach. Your order will move forward when each step is confirmed.</p><a href="#questions" className="text-sm underline underline-offset-4">How delivery will work →</a></div><ol className="delivery-steps">{[['01', 'Made ready for you', 'Preparation and packaging at the shop.'], ['02', 'Collected with care', 'Q Fashion arranges a local courier for pickup.'], ['03', 'On its way home', 'An estimated arrival window and confirmed order updates.']].map(([number, title, copy]) => <li key={number}><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></li>)}</ol></section>
 
       <section id="questions" className="page-section faq-section"><div><p className="eyebrow">BEFORE WE BEGIN</p><h2>A little more<br /><em>about Q.</em></h2><p>Something else on your mind?</p><a href="mailto:qfashion.shop1@gmail.com" className="btn-ghost mt-4">Talk to us ↗</a></div><div>{questions.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div></section>
