@@ -25,7 +25,7 @@ function ProductDialog({ product, onClose }) {
   }, []);
   const itemGst = product.sellPrice * 0.05;
   const deliveryFee = 100;
-  const platformFee = 10;
+  const platformFee = product.type === 'Vests' ? 10 : 22.5;
   const original = angle === 'Front' || angle === 'Back';
   return <dialog ref={ref} onClose={onClose} className="collection-dialog collection-dialog-wide" aria-label={product.name}>
     <div className="dialog-heading"><h2>{product.name}</h2><button type="button" onClick={() => ref.current.close()} className="btn-quiet">Close</button></div>
