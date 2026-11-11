@@ -24,6 +24,46 @@ function PriceBreakdown({ items }) {
   </dl>;
 }
 
+const colourSwatches = {
+  Beige: '#c5ad88', Black: '#242424', Blue: '#3266a1', Burgundy: '#602638',
+  Cyan: '#008eae', Green: '#315c43', Grey: '#888888', Navy: '#242e4e',
+  Red: '#b52632', White: '#ffffff', Yellow: '#e8b921',
+};
+
+const productTypes = {
+  'Oversized tees': 'Oversized T-shirt',
+  Vests: 'Sleeveless vest',
+  Sweatshirts: 'Crewneck sweatshirt',
+};
+
+const sizeLabels = { M: 'Medium', L: 'Large', XL: 'Extra large', XXL: 'Double extra large' };
+
+function productDescription(product) {
+  const colour = product.color.toLowerCase();
+  if (product.type === 'Oversized tees') {
+    const graphic = product.name.includes('Motorsport') ? 'motorsport graphic' : 'graphic print';
+    return `This ${colour} short-sleeve tee has a ${graphic} and a roomy, oversized cut.`;
+  }
+  if (product.type === 'Vests') {
+    const graphic = product.name.includes('Football') ? 'football graphic' : 'number 23 graphic';
+    return `A ${colour} sleeveless dot-knit vest with a ${graphic}. Wear it on its own or layer it over a tee.`;
+  }
+  return `A ${colour} long-sleeve crewneck sweatshirt for casual layering.`;
+}
+
+function SizeChart({ product }) {
+  return <details className="rounded-lg border border-line bg-white px-3 py-2">
+    <summary className="cursor-pointer py-1 text-sm font-semibold">Size chart</summary>
+    <table className="mt-2 w-full text-left text-sm">
+      <thead className="border-b border-line"><tr><th scope="col" className="py-1">Label</th><th scope="col" className="py-1">Size</th></tr></thead>
+      <tbody>{product.variants.map(({ sku, size }) => <tr key={sku} className="border-b border-line">
+        <th scope="row" className="py-1.5 font-semibold">{size}</th><td className="py-1.5">{sizeLabels[size] || size}</td>
+      </tr>)}</tbody>
+    </table>
+    <p className="mt-3 text-xs text-muted">BS Menz Shop has confirmed the size labels. Ask Q Fashion for chest width and garment length before choosing a size.</p>
+  </details>;
+}
+
 function StylePreview({ product, side, women }) {
   const vest = product.type === 'Vests';
   const index = Number(product.id.slice(-2)) - 1;
@@ -32,8 +72,8 @@ function StylePreview({ product, side, women }) {
   const columns = vest ? 5 : firstGroup ? 4 : 3;
   const column = vest || firstGroup ? index : index - 4;
   const ratio = vest ? 0.6 : !side ? 1 : firstGroup ? 0.667 : 0.89;
-  return <div role="img" aria-label={product.name + ' AI styling preview'} className="w-full max-w-md mx-auto rounded-lg"
-    style={{ aspectRatio: ratio, maxWidth: `min(100%, ${ratio * 50}vh, ${ratio * 25}rem)`, backgroundImage: 'url(/bs-menz/' + board + (side ? '-side' : '') + '.jpg)', backgroundSize: (columns * 100) + '% ' + (vest ? '100%' : '200%'), backgroundPosition: (column * 100 / (columns - 1)) + '% ' + (women ? '100%' : '0%'), backgroundRepeat: 'no-repeat' }} />;
+  return <div role="img" aria-label={product.name + ' AI styling preview'} className="mx-auto w-full"
+    style={{ aspectRatio: ratio, maxWidth: `min(100%, ${ratio * 100}cqh)`, backgroundImage: 'url(/bs-menz/' + board + (side ? '-side' : '') + '-white.jpg)', backgroundSize: (columns * 100) + '% ' + (vest ? '100%' : '200%'), backgroundPosition: (column * 100 / (columns - 1)) + '% ' + (women ? '100%' : '0%'), backgroundRepeat: 'no-repeat' }} />;
 }
 
 function ProductGallery({ product }) {
@@ -53,7 +93,7 @@ function ProductGallery({ product }) {
   }
   return <section className="space-y-3" aria-label="Product photo gallery">
     <div ref={track} tabIndex={0} aria-label="Swipe or use arrow keys to see photos"
-      className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-lg bg-canvas"
+      className="mx-auto flex aspect-[4/5] max-h-[min(52svh,24rem)] w-[min(100%,41.6svh,19.2rem)] snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-lg border border-line bg-white [scrollbar-width:none]"
       onScroll={e => {
         const el = e.currentTarget;
         setIndex(Math.max(0, Math.min(slides.length - 1, Math.round(el.scrollLeft / el.clientWidth))));
@@ -63,11 +103,9 @@ function ProductGallery({ product }) {
         e.preventDefault();
         move(index + (e.key === 'ArrowRight' ? 1 : -1));
       }}>
-      {slides.map(slide => <div key={slide.label} className="flex h-[min(50vh,25rem)] w-full shrink-0 snap-start items-center justify-center overflow-hidden">
+      {slides.map(slide => <div key={slide.label} className="flex h-full w-full shrink-0 snap-start items-center justify-center overflow-hidden [container-type:size]">
         {slide.src ? <img className="h-full w-full object-contain" src={slide.src} loading="lazy" draggable={false} alt={product.name + ' · ' + slide.label} /> :
-          <div className="w-full max-w-[16rem] h-full flex items-center">
-            <StylePreview product={product} side={slide.label.includes('side')} women={slide.label.includes('Women')} />
-          </div>}
+          <StylePreview product={product} side={slide.label.includes('side')} women={slide.label.includes('Women')} />}
       </div>)}
     </div>
     <div className="flex items-center justify-between gap-2">
@@ -95,10 +133,16 @@ function ProductDialog({ product, basket, onAdd, onClose }) {
       <ProductGallery product={product} />
       <div className="space-y-3">
         <p className="eyebrow">BS MENZ SHOP</p>
-        {product.fabric && <p>{product.fabric}</p>}
+        <p className="text-sm leading-relaxed">{productDescription(product)}</p>
+        <dl className="grid grid-cols-2 gap-2 rounded-lg border border-line bg-white p-3 text-sm">
+          <dt className="text-muted">Type</dt><dd className="font-medium">{productTypes[product.type]}</dd>
+          <dt className="text-muted">Colour</dt><dd className="font-medium">{product.color}</dd>
+          <dt className="text-muted">Fabric</dt><dd className="font-medium">{product.fabric || 'Awaiting retailer confirmation'}</dd>
+        </dl>
         {sku ? <label className="block">Size<select value={size} onChange={e => setSize(e.target.value)} className="field mt-1">
           {product.variants.map(variant => <option key={variant.sku}>{variant.size}</option>)}
         </select></label> : <p className="notice">Sizes and stock are being confirmed.</p>}
+        <SizeChart product={product} />
         <PriceBreakdown items={[product]} />
         <p className="text-sm">Free delivery on orders of two or more items.</p>
         <button type="button" className="btn-primary" disabled={inBasket || !sku} onClick={() => {
@@ -172,9 +216,21 @@ export default function BsMenzCollection() {
       {['All', 'Oversized tees', 'Vests', 'Sweatshirts'].map(option => <button type="button" key={option} aria-pressed={type === option} className={type === option ? 'chip chip-on' : 'chip'} onClick={() => setType(option)}>{option}</button>)}
     </div>
     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-      {shown.map(product => <button type="button" key={product.id} className="card overflow-hidden text-left hover:shadow-md" onClick={() => setSelected(product)}>
-        <img className="aspect-[4/5] w-full object-contain bg-canvas" src={product.photos.front || product.photos.back} alt={product.name} loading="lazy" />
-        <div className="p-3"><p className="eyebrow">{product.type}</p><h3 className="font-bold my-1">{product.name}</h3><p>{inr(product.sellPrice)} <span className="text-xs text-muted">item price</span></p></div>
+      {shown.map(product => <button type="button" key={product.id} className="card flex min-w-0 flex-col overflow-hidden text-left transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={() => setSelected(product)}>
+        <img className="aspect-[4/5] w-full border-b border-line bg-white object-contain" src={product.photos.front || product.photos.back} alt="" loading="lazy" />
+        <div className="flex flex-1 flex-col p-3 sm:p-4">
+          <p className="mb-2 flex items-center gap-2 text-xs text-muted">
+            <span aria-hidden="true" className="h-4 w-4 shrink-0 rounded-full border border-black/25" style={{ backgroundColor: colourSwatches[product.color] }} />
+            {product.color}
+          </p>
+          <h3 className="text-sm font-semibold leading-snug sm:text-base">{product.name}</h3>
+          <p className="mb-2 mt-1 text-xs leading-relaxed text-muted">
+            {product.fabric || productTypes[product.type]} · {product.variants[0]?.size}–{product.variants.at(-1)?.size}
+          </p>
+          <p className="mt-auto text-xl font-bold leading-tight tracking-tight sm:text-2xl">{inr(product.sellPrice)}</p>
+          <p className="mt-1 text-xs font-semibold">Free delivery on 2+ items</p>
+          <p className="text-xs text-muted">₹100 delivery for one item</p>
+        </div>
       </button>)}
     </div>
     <section className="mt-10" aria-labelledby="bs-combos">
