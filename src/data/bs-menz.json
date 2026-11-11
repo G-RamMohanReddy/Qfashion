@@ -594,7 +594,28 @@
       "front": "/bs-menz/BSM-SWEAT01-front.jpeg",
       "back": "/bs-menz/BSM-SWEAT01-back.jpeg"
     },
-    "variants": []
+    "variants": [
+      {
+        "sku": "BSM-SWEAT01-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT01-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT01-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT01-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
   },
   {
     "id": "BSM-SWEAT02",
@@ -607,7 +628,28 @@
     "photos": {
       "back": "/bs-menz/BSM-SWEAT02-back.jpeg"
     },
-    "variants": []
+    "variants": [
+      {
+        "sku": "BSM-SWEAT02-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT02-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT02-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT02-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
   },
   {
     "id": "BSM-SWEAT03",
@@ -620,7 +662,28 @@
     "photos": {
       "front": "/bs-menz/BSM-SWEAT03-front.jpeg"
     },
-    "variants": []
+    "variants": [
+      {
+        "sku": "BSM-SWEAT03-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT03-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT03-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT03-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
   },
   {
     "id": "BSM-SWEAT04",
@@ -634,7 +697,28 @@
       "front": "/bs-menz/BSM-SWEAT04-front.jpeg",
       "back": "/bs-menz/BSM-SWEAT04-back.jpeg"
     },
-    "variants": []
+    "variants": [
+      {
+        "sku": "BSM-SWEAT04-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT04-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT04-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT04-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
   },
   {
     "id": "BSM-SWEAT05",
@@ -648,6 +732,27 @@
       "front": "/bs-menz/BSM-SWEAT05-front.jpeg",
       "back": "/bs-menz/BSM-SWEAT05-back.jpeg"
     },
-    "variants": []
+    "variants": [
+      {
+        "sku": "BSM-SWEAT05-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT05-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT05-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-SWEAT05-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
   }
 ]

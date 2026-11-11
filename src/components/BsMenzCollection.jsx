@@ -111,10 +111,49 @@ function ProductDialog({ product, basket, onAdd, onClose }) {
   </dialog>;
 }
 
+const combos = [
+  { name: 'Tee + vest', ids: ['BSM-TEE01', 'BSM-VEST01'] },
+  { name: 'Tee + sweatshirt', ids: ['BSM-TEE02', 'BSM-SWEAT01'] },
+  { name: 'Two different tees', ids: ['BSM-TEE03', 'BSM-TEE04'] },
+];
+
+function ComboCard({ combo, basket, onAdd }) {
+  const pieces = combo.ids.map(id => products.find(product => product.id === id));
+  const [sizes, setSizes] = useState(() => pieces.map(piece => piece.variants[0].size));
+  const choices = pieces.map((piece, index) => {
+    const variant = piece.variants.find(row => row.size === sizes[index]);
+    return { sku: variant.sku, size: variant.size, name: piece.name, type: piece.type, sellPrice: piece.sellPrice };
+  });
+  const alreadyAdded = choices.some(choice => basket.some(item => item.sku === choice.sku));
+  const { totalPaise, deliveryDiscountPaise } = estimate(choices);
+  return <article className="card p-4 space-y-3">
+    <h3 className="font-bold">{combo.name}</h3>
+    <div className="grid grid-cols-2 gap-3">
+      {pieces.map((piece, index) => <div className="min-w-0" key={piece.id}>
+        <img className="aspect-square w-full object-contain bg-canvas rounded-lg" src={piece.photos.front || piece.photos.back} alt={piece.name} loading="lazy" />
+        <label className="block text-xs mt-2">{piece.name}
+          <select className="field mt-1" aria-label={piece.name + ' size in ' + combo.name} value={sizes[index]}
+            onChange={event => { const size = event.target.value; setSizes(current => current.map((value, i) => i === index ? size : value)); }}>
+            {piece.variants.map(variant => <option key={variant.sku}>{variant.size}</option>)}
+          </select>
+        </label>
+      </div>)}
+    </div>
+    <p className="text-sm"><s className="text-muted">{inr((totalPaise + deliveryDiscountPaise) / 100)}</s> <strong>{inr(totalPaise / 100)}</strong> estimated total</p>
+    <p className="text-xs">Save {inr(deliveryDiscountPaise / 100)} on delivery</p>
+    <button type="button" disabled={alreadyAdded} className="btn-primary w-full" onClick={() => onAdd(choices)}>
+      {alreadyAdded ? 'One of these sizes is in the basket' : 'Add combo to basket estimate'}
+    </button>
+  </article>;
+}
+
 export default function BsMenzCollection() {
   const [type, setType] = useState('All');
   const [selected, setSelected] = useState(null);
   const [basket, setBasket] = useState([]);
+  function addItems(items) {
+    setBasket(current => current.some(row => items.some(item => item.sku === row.sku)) ? current : [...current, ...items]);
+  }
   const shown = type === 'All' ? products : products.filter(product => product.type === type);
   return <section className="page-section collection-section" id="collection" aria-labelledby="bs-menz-title">
     <div className="section-heading"><div><p className="eyebrow">BS MENZ SHOP</p><h2 id="bs-menz-title">The streetwear <em>collection.</em></h2></div><p>Oversized tees, dot knit vests and sweatshirts.</p></div>
@@ -138,8 +177,15 @@ export default function BsMenzCollection() {
         <div className="p-3"><p className="eyebrow">{product.type}</p><h3 className="font-bold my-1">{product.name}</h3><p>{inr(product.sellPrice)} <span className="text-xs text-muted">item price</span></p></div>
       </button>)}
     </div>
+    <section className="mt-10" aria-labelledby="bs-combos">
+      <h3 id="bs-combos" className="font-editorial text-3xl mb-2">BS Menz combos</h3>
+      <p className="text-sm mb-4">Choose a size for each piece. Every combo saves ₹100 on delivery.</p>
+      <div className="grid gap-4 md:grid-cols-3">
+        {combos.map(combo => <ComboCard key={combo.name} combo={combo} basket={basket} onAdd={addItems} />)}
+      </div>
+    </section>
     {selected && <ProductDialog key={selected.id} product={selected} basket={basket}
-      onAdd={item => setBasket(current => current.some(row => row.sku === item.sku) ? current : [...current, item])}
+      onAdd={item => addItems([item])}
       onClose={() => setSelected(null)} />}
   </section>;
 }
