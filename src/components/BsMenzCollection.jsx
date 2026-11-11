@@ -6,15 +6,18 @@ function estimate(items) {
   const itemPaise = items.reduce((sum, item) => sum + item.sellPrice * 100, 0);
   const gstPaise = Math.round(itemPaise * 0.05);
   const platformPaise = items.reduce((sum, item) => sum + (item.type === 'Vests' ? 1000 : 2250), 0);
-  const deliveryPaise = items.length === 1 ? 10000 : 0;
-  return { itemPaise, gstPaise, platformPaise, deliveryPaise, totalPaise: itemPaise + gstPaise + platformPaise + deliveryPaise };
+  const deliveryPaise = items.length > 0 ? 10000 : 0;
+  const deliveryDiscountPaise = items.length >= 2 ? deliveryPaise : 0;
+  const totalPaise = itemPaise + gstPaise + platformPaise + deliveryPaise - deliveryDiscountPaise;
+  return { itemPaise, gstPaise, platformPaise, deliveryPaise, deliveryDiscountPaise, totalPaise };
 }
 
 function PriceBreakdown({ items }) {
-  const { itemPaise, gstPaise, platformPaise, deliveryPaise, totalPaise } = estimate(items);
+  const { itemPaise, gstPaise, platformPaise, deliveryPaise, deliveryDiscountPaise, totalPaise } = estimate(items);
   return <dl className="space-y-2 border-t border-line pt-3 text-sm">
     <div className="flex justify-between"><dt>Selling price</dt><dd>{inr(itemPaise / 100)}</dd></div>
-    <div className="flex justify-between"><dt>Delivery</dt><dd>{deliveryPaise ? inr(deliveryPaise / 100) : 'Free'}</dd></div>
+    <div className="flex justify-between"><dt>Delivery</dt><dd>{inr(deliveryPaise / 100)}</dd></div>
+    {deliveryDiscountPaise > 0 && <div className="flex justify-between font-semibold"><dt>Free delivery discount</dt><dd>−{inr(deliveryDiscountPaise / 100)}</dd></div>}
     <div className="flex justify-between"><dt>Estimated apparel GST (5%)</dt><dd>{inr(gstPaise / 100)}</dd></div>
     <div className="flex justify-between"><dt>Platform fee</dt><dd>{inr(platformPaise / 100)}</dd></div>
     <div className="flex justify-between border-t border-line pt-2 font-semibold"><dt>Estimated total</dt><dd>{inr(totalPaise / 100)}</dd></div>
