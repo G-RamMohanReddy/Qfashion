@@ -1,0 +1,410 @@
+[
+  {
+    "id": "BSM-TEE01",
+    "name": "Cyan Graphic Oversized Tee",
+    "color": "Cyan",
+    "type": "Oversized tees",
+    "fabric": "250 GSM cotton French terry looper",
+    "sellPrice": 550,
+    "photos": {
+      "front": "/bs-menz/BSM-TEE01-front.jpeg",
+      "back": "/bs-menz/BSM-TEE01-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-TEE01-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE01-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE01-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE01-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-TEE02",
+    "name": "Beige Graphic Oversized Tee",
+    "color": "Beige",
+    "type": "Oversized tees",
+    "fabric": "250 GSM cotton French terry looper",
+    "sellPrice": 550,
+    "photos": {
+      "front": "/bs-menz/BSM-TEE02-front.jpeg",
+      "back": "/bs-menz/BSM-TEE02-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-TEE02-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE02-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE02-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE02-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-TEE03",
+    "name": "Red Motorsport Oversized Tee",
+    "color": "Red",
+    "type": "Oversized tees",
+    "fabric": "250 GSM cotton French terry looper",
+    "sellPrice": 550,
+    "photos": {
+      "front": "/bs-menz/BSM-TEE03-front.jpeg",
+      "back": "/bs-menz/BSM-TEE03-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-TEE03-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE03-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE03-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE03-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-TEE04",
+    "name": "Black Motorsport Oversized Tee",
+    "color": "Black",
+    "type": "Oversized tees",
+    "fabric": "250 GSM cotton French terry looper",
+    "sellPrice": 550,
+    "photos": {
+      "front": "/bs-menz/BSM-TEE04-front.jpeg",
+      "back": "/bs-menz/BSM-TEE04-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-TEE04-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE04-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE04-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE04-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-TEE05",
+    "name": "Navy Motorsport Oversized Tee",
+    "color": "Navy",
+    "type": "Oversized tees",
+    "fabric": "250 GSM cotton French terry looper",
+    "sellPrice": 550,
+    "photos": {
+      "front": "/bs-menz/BSM-TEE05-front.jpeg",
+      "back": "/bs-menz/BSM-TEE05-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-TEE05-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE05-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE05-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE05-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-TEE06",
+    "name": "Green Motorsport Oversized Tee",
+    "color": "Green",
+    "type": "Oversized tees",
+    "fabric": "250 GSM cotton French terry looper",
+    "sellPrice": 550,
+    "photos": {
+      "front": "/bs-menz/BSM-TEE06-front.jpeg",
+      "back": "/bs-menz/BSM-TEE06-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-TEE06-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE06-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE06-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE06-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-TEE07",
+    "name": "Burgundy Motorsport Oversized Tee",
+    "color": "Burgundy",
+    "type": "Oversized tees",
+    "fabric": "250 GSM cotton French terry looper",
+    "sellPrice": 550,
+    "photos": {
+      "front": "/bs-menz/BSM-TEE07-front.jpeg",
+      "back": "/bs-menz/BSM-TEE07-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-TEE07-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE07-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE07-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-TEE07-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-VEST01",
+    "name": "Black 23 Dot Knit Vest",
+    "color": "Black",
+    "type": "Vests",
+    "fabric": "Dot knit",
+    "sellPrice": 200,
+    "photos": {
+      "front": "/bs-menz/BSM-VEST01-front.jpeg",
+      "back": "/bs-menz/BSM-VEST01-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-VEST01-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST01-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST01-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST01-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-VEST02",
+    "name": "Grey 23 Dot Knit Vest",
+    "color": "Grey",
+    "type": "Vests",
+    "fabric": "Dot knit",
+    "sellPrice": 200,
+    "photos": {
+      "front": "/bs-menz/BSM-VEST02-front.jpeg",
+      "back": "/bs-menz/BSM-VEST02-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-VEST02-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST02-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST02-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST02-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-VEST03",
+    "name": "White 23 Dot Knit Vest",
+    "color": "White",
+    "type": "Vests",
+    "fabric": "Dot knit",
+    "sellPrice": 200,
+    "photos": {
+      "front": "/bs-menz/BSM-VEST03-front.jpeg",
+      "back": "/bs-menz/BSM-VEST03-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-VEST03-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST03-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST03-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST03-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-VEST04",
+    "name": "Red 23 Dot Knit Vest",
+    "color": "Red",
+    "type": "Vests",
+    "fabric": "Dot knit",
+    "sellPrice": 200,
+    "photos": {
+      "front": "/bs-menz/BSM-VEST04-front.jpeg",
+      "back": "/bs-menz/BSM-VEST04-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-VEST04-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST04-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST04-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST04-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  },
+  {
+    "id": "BSM-VEST05",
+    "name": "Yellow 23 Dot Knit Vest",
+    "color": "Yellow",
+    "type": "Vests",
+    "fabric": "Dot knit",
+    "sellPrice": 200,
+    "photos": {
+      "front": "/bs-menz/BSM-VEST05-front.jpeg",
+      "back": "/bs-menz/BSM-VEST05-back.jpeg"
+    },
+    "variants": [
+      {
+        "sku": "BSM-VEST05-M",
+        "size": "M",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST05-L",
+        "size": "L",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST05-XL",
+        "size": "XL",
+        "stock": 1
+      },
+      {
+        "sku": "BSM-VEST05-XXL",
+        "size": "XXL",
+        "stock": 1
+      }
+    ]
+  }
+]
