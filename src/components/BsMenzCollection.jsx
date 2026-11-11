@@ -2,6 +2,25 @@ import { useEffect, useRef, useState } from 'react';
 import products from '../data/bs-menz.json';
 import { inr } from '../lib/format.js';
 
+function estimate(items) {
+  const itemPaise = items.reduce((sum, item) => sum + item.sellPrice * 100, 0);
+  const gstPaise = Math.round(itemPaise * 0.05);
+  const platformPaise = items.reduce((sum, item) => sum + (item.type === 'Vests' ? 1000 : 2250), 0);
+  const deliveryPaise = items.length === 1 ? 10000 : 0;
+  return { itemPaise, gstPaise, platformPaise, deliveryPaise, totalPaise: itemPaise + gstPaise + platformPaise + deliveryPaise };
+}
+
+function PriceBreakdown({ items }) {
+  const { itemPaise, gstPaise, platformPaise, deliveryPaise, totalPaise } = estimate(items);
+  return <dl className="space-y-2 border-t border-line pt-3 text-sm">
+    <div className="flex justify-between"><dt>Selling price</dt><dd>{inr(itemPaise / 100)}</dd></div>
+    <div className="flex justify-between"><dt>Delivery</dt><dd>{deliveryPaise ? inr(deliveryPaise / 100) : 'Free'}</dd></div>
+    <div className="flex justify-between"><dt>Estimated apparel GST (5%)</dt><dd>{inr(gstPaise / 100)}</dd></div>
+    <div className="flex justify-between"><dt>Platform fee</dt><dd>{inr(platformPaise / 100)}</dd></div>
+    <div className="flex justify-between border-t border-line pt-2 font-semibold"><dt>Estimated total</dt><dd>{inr(totalPaise / 100)}</dd></div>
+  </dl>;
+}
+
 function StylePreview({ product, side, women }) {
   const vest = product.type === 'Vests';
   const index = Number(product.id.slice(-2)) - 1;
@@ -14,7 +33,7 @@ function StylePreview({ product, side, women }) {
     style={{ aspectRatio: ratio, backgroundImage: 'url(/bs-menz/' + board + (side ? '-side' : '') + '.jpg)', backgroundSize: (columns * 100) + '% ' + (vest ? '100%' : '200%'), backgroundPosition: (column * 100 / (columns - 1)) + '% ' + (women ? '100%' : '0%'), backgroundRepeat: 'no-repeat' }} />;
 }
 
-function ProductDialog({ product, onClose }) {
+function ProductDialog({ product, basket, onAdd, onClose }) {
   const ref = useRef(null);
   const [angle, setAngle] = useState('Front');
   const [size, setSize] = useState('M');
@@ -23,9 +42,8 @@ function ProductDialog({ product, onClose }) {
     ref.current?.showModal();
     return () => previous?.focus?.();
   }, []);
-  const itemGst = product.sellPrice * 0.05;
-  const deliveryFee = 100;
-  const platformFee = product.type === 'Vests' ? 10 : 22.5;
+  const sku = product.variants.find(variant => variant.size === size).sku;
+  const inBasket = basket.some(item => item.sku === sku);
   const original = angle === 'Front' || angle === 'Back';
   return <dialog ref={ref} onClose={onClose} className="collection-dialog collection-dialog-wide" aria-label={product.name}>
     <div className="dialog-heading"><h2>{product.name}</h2><button type="button" onClick={() => ref.current.close()} className="btn-quiet">Close</button></div>
@@ -45,14 +63,13 @@ function ProductDialog({ product, onClose }) {
         <label className="block">Size<select value={size} onChange={e => setSize(e.target.value)} className="field mt-1">
           {product.variants.map(variant => <option key={variant.sku}>{variant.size}</option>)}
         </select></label>
-        <dl className="space-y-2 border-t border-line pt-3 text-sm">
-          <div className="flex justify-between"><dt>Selling price</dt><dd>{inr(product.sellPrice)}</dd></div>
-          <div className="flex justify-between"><dt>Delivery</dt><dd>{inr(deliveryFee)}</dd></div>
-          <div className="flex justify-between"><dt>Estimated apparel GST (5%)</dt><dd>{inr(itemGst)}</dd></div>
-          <div className="flex justify-between"><dt>Platform fee</dt><dd>{inr(platformFee)}</dd></div>
-          <div className="flex justify-between border-t border-line pt-2 font-semibold"><dt>Estimated total</dt><dd>{inr(product.sellPrice + itemGst + deliveryFee + platformFee)}</dd></div>
-        </dl>
-        <p className="notice">Single-item estimate for Guwahati and Amingaon, within approximately 30 km of the shop. Final delivery eligibility and tax on fees will be confirmed before ordering opens.</p>
+        <PriceBreakdown items={[product]} />
+        <p className="text-sm">Free delivery on orders of two or more items.</p>
+        <button type="button" className="btn-primary" disabled={inBasket} onClick={() => {
+          onAdd({ sku, size, name: product.name, type: product.type, sellPrice: product.sellPrice });
+          ref.current.close();
+        }}>{inBasket ? 'Size already in estimate' : 'Add to basket estimate'}</button>
+        <p className="notice">Final delivery eligibility and tax on fees will be confirmed before ordering opens.</p>
       </div>
     </div>
   </dialog>;
@@ -61,9 +78,21 @@ function ProductDialog({ product, onClose }) {
 export default function BsMenzCollection() {
   const [type, setType] = useState('All');
   const [selected, setSelected] = useState(null);
+  const [basket, setBasket] = useState([]);
   const shown = type === 'All' ? products : products.filter(product => product.type === type);
   return <section className="page-section collection-section" id="collection" aria-labelledby="bs-menz-title">
     <div className="section-heading"><div><p className="eyebrow">BS MENZ SHOP</p><h2 id="bs-menz-title">The streetwear <em>collection.</em></h2></div><p>Oversized tees and dot knit vests.<br />Sizes M–XXL.</p></div>
+    <p className="mb-4 text-sm">₹100 delivery for one item. Free delivery on orders of two or more items.</p>
+    {basket.length > 0 && <section className="card p-4 mb-5" aria-labelledby="bs-estimate-title">
+      <h3 className="font-bold mb-2" id="bs-estimate-title">Basket estimate ({basket.length})</h3>
+      <ul className="space-y-2 mb-3">{basket.map(item => <li key={item.sku} className="flex gap-3 justify-between text-sm">
+        <span>{item.name} · {item.size}</span>
+        <button type="button" className="underline" aria-label={'Remove ' + item.name + ' size ' + item.size}
+          onClick={() => setBasket(current => current.filter(row => row.sku !== item.sku))}>Remove</button>
+      </li>)}</ul>
+      <PriceBreakdown items={basket} />
+      <p className="text-xs text-muted mt-2">Price estimate only. Ordering opens after final tax and delivery checks.</p>
+    </section>}
     <div className="flex flex-wrap gap-2 mb-5" aria-label="Filter products">
       {['All', 'Oversized tees', 'Vests'].map(option => <button type="button" key={option} aria-pressed={type === option} className={type === option ? 'chip chip-on' : 'chip'} onClick={() => setType(option)}>{option}</button>)}
     </div>
@@ -73,6 +102,9 @@ export default function BsMenzCollection() {
         <div className="p-3"><p className="eyebrow">{product.type}</p><h3 className="font-bold my-1">{product.name}</h3><p>{inr(product.sellPrice)} <span className="text-xs text-muted">item price</span></p></div>
       </button>)}
     </div>
-    {selected && <ProductDialog key={selected.id} product={selected} onClose={() => setSelected(null)} />}
+    {selected && <ProductDialog key={selected.id} product={selected} basket={basket}
+      onAdd={item => setBasket(current => current.some(row => row.sku === item.sku) ? current : [...current, item])}
+      onClose={() => setSelected(null)} />}
   </section>;
 }
+
