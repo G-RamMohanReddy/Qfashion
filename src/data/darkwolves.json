@@ -1,0 +1,78 @@
+[
+  {
+    "id": "DW-001",
+    "name": "Dark Teal Boxy Graphic Tee",
+    "type": "Boxy tees",
+    "color": "Dark teal",
+    "fabric": "250 GSM · 100% cotton",
+    "sellPrice": 649,
+    "description": "A boxy dark teal tee with a butter-yellow contrast neckline and a distressed graphic across the front.",
+    "retailer": "Darkwolves",
+    "variants": [
+      {
+        "sku": "DW-001-S",
+        "size": "S"
+      },
+      {
+        "sku": "DW-001-L",
+        "size": "L"
+      }
+    ],
+    "photos": {
+      "front": "/darkwolves/tee-front.jpg"
+    },
+    "stylingPhoto": "/darkwolves/tee-styling.jpg"
+  },
+  {
+    "id": "DW-007",
+    "name": "Light Grey Boxy Clasp Hoodie",
+    "type": "Hoodies",
+    "color": "Light grey",
+    "fabric": "450 GSM fabric",
+    "sellPrice": 2400,
+    "description": "A heavyweight boxy hoodie with a full zipper, three metal clasps and front pockets.",
+    "retailer": "Darkwolves",
+    "variants": [
+      {
+        "sku": "DW-007-S",
+        "size": "S"
+      },
+      {
+        "sku": "DW-007-M",
+        "size": "M"
+      }
+    ],
+    "photos": {
+      "front": "/darkwolves/grey-front.jpg",
+      "angle": "/darkwolves/grey-angle.jpg",
+      "detail": "/darkwolves/grey-detail.jpg"
+    },
+    "stylingPhoto": "/darkwolves/grey-styling.jpg"
+  },
+  {
+    "id": "DW-009",
+    "name": "Black Boxy Clasp Hoodie",
+    "type": "Hoodies",
+    "color": "Black",
+    "fabric": "450 GSM fabric",
+    "sellPrice": 2400,
+    "description": "A heavyweight black hoodie with a boxy cut, three metal clasps over the front zipper and banded cuffs.",
+    "retailer": "Darkwolves",
+    "variants": [
+      {
+        "sku": "DW-009-M",
+        "size": "M"
+      },
+      {
+        "sku": "DW-009-L",
+        "size": "L"
+      }
+    ],
+    "photos": {
+      "front": "/darkwolves/black-front.jpg",
+      "angle": "/darkwolves/black-angle.jpg",
+      "detail": "/darkwolves/black-detail.jpg"
+    },
+    "stylingPhoto": "/darkwolves/black-styling.jpg"
+  }
+]

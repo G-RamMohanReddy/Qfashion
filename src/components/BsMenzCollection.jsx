@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import products from '../data/bs-menz.json';
+import darkwolves from '../data/darkwolves.json';
 import { inr } from '../lib/format.js';
 
 function estimate(items) {
   const itemPaise = items.reduce((sum, item) => sum + item.sellPrice * 100, 0);
   const gstPaise = Math.round(itemPaise * 0.05);
-  const platformPaise = items.reduce((sum, item) => sum + (item.type === 'Oversized tees' ? 2250 : 1000), 0);
+  const platformPaise = items.reduce((sum, item) => sum + (['Oversized tees', 'Boxy tees'].includes(item.type) ? 2250 : 1000), 0);
   const deliveryPaise = items.length > 0 ? 10000 : 0;
   const deliveryDiscountPaise = items.length >= 2 ? deliveryPaise : 0;
   const totalPaise = itemPaise + gstPaise + platformPaise + deliveryPaise - deliveryDiscountPaise;
@@ -26,19 +27,22 @@ function PriceBreakdown({ items }) {
 
 const colourSwatches = {
   Beige: '#c5ad88', Black: '#242424', Blue: '#3266a1', Burgundy: '#602638',
-  Cyan: '#008eae', Green: '#315c43', Grey: '#888888', Navy: '#242e4e',
+  'Dark teal': '#164450', 'Light grey': '#b3b4b6', Cyan: '#008eae', Green: '#315c43', Grey: '#888888', Navy: '#242e4e',
   Red: '#b52632', White: '#ffffff', Yellow: '#e8b921',
 };
 
 const productTypes = {
   'Oversized tees': 'Oversized T-shirt',
+  'Boxy tees': 'Boxy T-shirt',
+  Hoodies: 'Clasp hoodie',
   Vests: 'Sleeveless vest',
   Sweatshirts: 'Crewneck sweatshirt',
 };
 
-const sizeLabels = { M: 'Medium', L: 'Large', XL: 'Extra large', XXL: 'Double extra large' };
+const sizeLabels = { S: 'Small', M: 'Medium', L: 'Large', XL: 'Extra large', XXL: 'Double extra large' };
 
 function productDescription(product) {
+  if (product.description) return product.description;
   const colour = product.color.toLowerCase();
   if (product.type === 'Oversized tees') {
     const graphic = product.name.includes('Motorsport') ? 'motorsport graphic' : 'graphic print';
@@ -60,7 +64,7 @@ function SizeChart({ product }) {
         <th scope="row" className="py-1.5 font-semibold">{size}</th><td className="py-1.5">{sizeLabels[size] || size}</td>
       </tr>)}</tbody>
     </table>
-    <p className="mt-3 text-xs text-muted">BS Menz Shop has confirmed the size labels. Ask Q Fashion for chest width and garment length before choosing a size.</p>
+    <p className="mt-3 text-xs text-muted">Size labels are from {product.retailer || 'BS Menz Shop'}. Ask Q Fashion for chest width and garment length before choosing a size.</p>
   </details>;
 }
 
@@ -80,9 +84,11 @@ function ProductGallery({ product }) {
   const track = useRef(null);
   const [index, setIndex] = useState(0);
   const slides = Object.entries(product.photos).map(([angle, src]) => ({
-    label: angle === 'front' ? 'Front photo' : 'Back photo', src,
+    label: { front: 'Front photo', back: 'Back photo', angle: 'Garment angle', detail: 'Garment detail' }[angle], src,
   }));
-  if (product.styling !== false) {
+  if (product.stylingPhoto) {
+    slides.push({ label: 'AI styling · front and side', src: product.stylingPhoto, generated: true });
+  } else if (product.styling !== false) {
     slides.push({ label: 'Men’s styling' }, { label: 'Men’s side' });
     if (product.type === 'Oversized tees') slides.push({ label: 'Women’s styling' }, { label: 'Women’s side' });
   }
@@ -113,7 +119,7 @@ function ProductGallery({ product }) {
       <p className="text-sm text-center" aria-live="polite">{slides[index].label} · {index + 1} / {slides.length}</p>
       <button type="button" className="btn-ghost min-h-11" onClick={() => move(index + 1)} disabled={index === slides.length - 1} aria-label="Next photo">→</button>
     </div>
-    <p className="text-xs text-muted">{slides.length > 1 ? 'Swipe to see more. ' : ''}{slides[index].src ? 'Original product photo.' : 'AI styling preview. Original photos show the actual print and colour.'}</p>
+    <p className="text-xs text-muted">{slides.length > 1 ? 'Swipe to see more. ' : ''}{slides[index].src && !slides[index].generated ? 'Original product photo.' : 'AI styling preview. Original photos show the actual print and colour.'}</p>
   </section>;
 }
 
@@ -132,7 +138,7 @@ function ProductDialog({ product, basket, onAdd, onClose }) {
     <div className="grid gap-6 p-5 md:grid-cols-2">
       <ProductGallery product={product} />
       <div className="space-y-3">
-        <p className="eyebrow">BS MENZ SHOP</p>
+        <p className="eyebrow">{product.retailer || 'BS Menz Shop'}</p>
         <p className="text-sm leading-relaxed">{productDescription(product)}</p>
         <dl className="grid grid-cols-2 gap-2 rounded-lg border border-line bg-white p-3 text-sm">
           <dt className="text-muted">Type</dt><dd className="font-medium">{productTypes[product.type]}</dd>
@@ -197,8 +203,8 @@ function readBasket() {
   try {
     const skus = JSON.parse(sessionStorage.getItem(basketKey) || '[]');
     if (!Array.isArray(skus)) return [];
-    return products.flatMap(product => product.variants
-      .filter(variant => variant.stock > 0 && skus.includes(variant.sku))
+    return [...products, ...darkwolves].flatMap(product => product.variants
+      .filter(variant => variant.stock !== 0 && skus.includes(variant.sku))
       .map(({ sku, size }) => ({ sku, size, name: product.name, type: product.type, sellPrice: product.sellPrice })));
   } catch {
     return [];
@@ -234,7 +240,7 @@ function BasketDialog({ basket, onRemove, onClose }) {
         <PriceBreakdown items={basket} />
         <button type="button" className="btn-primary w-full" onClick={() => setStep('delivery')}>Enter delivery address</button>
       </> : <>
-        <p className="text-sm">Choose a size on any BS Menz item to add it to your bag.</p>
+        <p className="text-sm">Choose a size on an item in the collection to add it to your bag.</p>
         <a href="#collection" className="btn-primary" onClick={onClose}>Browse the collection</a>
       </>)}
       {step === 'delivery' && <form onSubmit={reviewDelivery} className="space-y-4">
@@ -270,6 +276,27 @@ function BasketDialog({ basket, onRemove, onClose }) {
   </dialog>;
 }
 
+function ProductCards({ products, onSelect }) {
+  return <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+      {products.map(product => <button type="button" key={product.id} className="card flex min-w-0 flex-col overflow-hidden text-left transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={() => onSelect(product)}>
+        <img className="aspect-[4/5] w-full border-b border-line bg-white object-contain" src={product.photos.front || product.photos.back} alt="" loading="lazy" />
+        <div className="flex flex-1 flex-col p-3 sm:p-4">
+          <p className="mb-2 flex items-center gap-2 text-xs text-muted">
+            <span aria-hidden="true" className="h-4 w-4 shrink-0 rounded-full border border-black/25" style={{ backgroundColor: colourSwatches[product.color] }} />
+            {product.color}
+          </p>
+          <h3 className="text-sm font-semibold leading-snug sm:text-base">{product.name}</h3>
+          <p className="mb-2 mt-1 text-xs leading-relaxed text-muted">
+            {product.fabric || productTypes[product.type]} · {product.variants.map(variant => variant.size).join(', ')}
+          </p>
+          <p className="mt-auto text-xl font-bold leading-tight tracking-tight sm:text-2xl">{inr(product.sellPrice)}</p>
+          <p className="mt-1 text-xs font-semibold">Free delivery on 2+ items</p>
+          <p className="text-xs text-muted">₹100 delivery for one item</p>
+        </div>
+      </button>)}
+    </div>;
+}
+
 export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBagCount }) {
   const [type, setType] = useState('All');
   const [selected, setSelected] = useState(null);
@@ -285,7 +312,10 @@ export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBag
   const shown = type === 'All' ? products : products.filter(product => product.type === type);
   return <section className="page-section collection-section" id="collection" aria-labelledby="bs-menz-title">
     <div className="section-heading"><div><p className="eyebrow">BS MENZ SHOP</p><h2 id="bs-menz-title">The streetwear <em>collection.</em></h2></div><p>Oversized tees, dot knit vests and sweatshirts.</p></div>
-    <p className="mb-4 text-sm">₹100 delivery for one item. Free delivery on orders of two or more items.</p>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+      <p>₹100 delivery for one item. Free delivery on orders of two or more items.</p>
+      <a className="underline underline-offset-4" href="#darkwolves">Browse Darkwolves ↓</a>
+    </div>
     {basket.length > 0 && <section className="card p-4 mb-5" aria-labelledby="bs-estimate-title">
       <h3 className="font-bold mb-2" id="bs-estimate-title">Basket estimate ({basket.length})</h3>
       <ul className="space-y-2 mb-3">{basket.map(item => <li key={item.sku} className="flex gap-3 justify-between text-sm">
@@ -299,30 +329,20 @@ export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBag
     <div className="flex flex-wrap gap-2 mb-5" aria-label="Filter products">
       {['All', 'Oversized tees', 'Vests', 'Sweatshirts'].map(option => <button type="button" key={option} aria-pressed={type === option} className={type === option ? 'chip chip-on' : 'chip'} onClick={() => setType(option)}>{option}</button>)}
     </div>
-    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-      {shown.map(product => <button type="button" key={product.id} className="card flex min-w-0 flex-col overflow-hidden text-left transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={() => setSelected(product)}>
-        <img className="aspect-[4/5] w-full border-b border-line bg-white object-contain" src={product.photos.front || product.photos.back} alt="" loading="lazy" />
-        <div className="flex flex-1 flex-col p-3 sm:p-4">
-          <p className="mb-2 flex items-center gap-2 text-xs text-muted">
-            <span aria-hidden="true" className="h-4 w-4 shrink-0 rounded-full border border-black/25" style={{ backgroundColor: colourSwatches[product.color] }} />
-            {product.color}
-          </p>
-          <h3 className="text-sm font-semibold leading-snug sm:text-base">{product.name}</h3>
-          <p className="mb-2 mt-1 text-xs leading-relaxed text-muted">
-            {product.fabric || productTypes[product.type]} · {product.variants[0]?.size}–{product.variants.at(-1)?.size}
-          </p>
-          <p className="mt-auto text-xl font-bold leading-tight tracking-tight sm:text-2xl">{inr(product.sellPrice)}</p>
-          <p className="mt-1 text-xs font-semibold">Free delivery on 2+ items</p>
-          <p className="text-xs text-muted">₹100 delivery for one item</p>
-        </div>
-      </button>)}
-    </div>
+    <ProductCards products={shown} onSelect={setSelected} />
     <section className="mt-10" aria-labelledby="bs-combos">
       <h3 id="bs-combos" className="font-editorial text-3xl mb-2">BS Menz combos</h3>
       <p className="text-sm mb-4">Choose a size for each piece. Every combo saves ₹100 on delivery.</p>
       <div className="grid gap-4 md:grid-cols-3">
         {combos.map(combo => <ComboCard key={combo.name} combo={combo} basket={basket} onAdd={addItems} />)}
       </div>
+    </section>
+    <section className="mt-12 scroll-mt-24" id="darkwolves" aria-labelledby="darkwolves-title">
+      <div className="section-heading">
+        <div><p className="eyebrow">DARKWOLVES · AMINGAON</p><h2 id="darkwolves-title">Boxy tees and <em>clasp hoodies.</em></h2></div>
+        <p>250 GSM cotton tees and 450 GSM hoodies from Khoka Market.</p>
+      </div>
+      <ProductCards products={darkwolves} onSelect={setSelected} />
     </section>
     {bagOpen && <BasketDialog basket={basket} onRemove={removeItem} onClose={onCloseBag} />}
     {selected && <ProductDialog key={selected.id} product={selected} basket={basket}
