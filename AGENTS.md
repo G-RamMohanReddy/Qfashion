@@ -1,0 +1,8 @@
+# Q Fashion project instructions
+
+Before releasing a Q Fashion change, check the user's latest request and carry forward the existing requirements that still apply. Verify the affected flow on a preview and confirm the intended result on qfashion.shop after an authorized release. Record what was verified and any gaps in the handoff.
+
+- Keep one mixed homepage grid for all retailers. Show retailer names, descriptions and locations inside item details. Category filters should include matching items from every retailer. Alternate photo cards must open the same product and use the same size and stock records.
+- For catalog changes, check each affected listing against its retailer information, including price, available sizes, type, known fabric and photos. Keep original photos first, label AI styling, and check that the gallery supports swiping, consistent frames and side angles. Oversized tees should have male and female styling views. Do not invent garment measurements or photos for undocumented angles.
+- For storefront changes, check the hero and catalog at phone and desktop widths, open an item from each affected retailer, and smoke test the bag. For pricing changes, verify the item and fee breakdown and the ₹100 delivery charge for one item that is waived at two or more items, unless the user changes that rule.
+- For sign-in, inventory, checkout, payment and delivery changes, verify the affected flow in staging before release. Include applicable user requirements such as persistent sign-in, stock updates, customer address and pincode, online-only verified payments, order records and delivery estimates with a buffer. Keep live rider tracking off.

@@ -124,7 +124,7 @@ function ProductGallery({ product }) {
     label: { front: 'Front photo', back: 'Back photo', angle: 'Garment angle', detail: 'Garment detail' }[angle], src,
   }));
   if (product.stylingPhoto) {
-    slides.push({ label: 'AI styling · front and side', src: product.stylingPhoto, generated: true });
+    slides.push({ label: product.stylingLabel || 'AI styling · front and side', src: product.stylingPhoto, generated: true });
   } else if (product.styling !== false) {
     slides.push({ label: 'Men’s styling' }, { label: 'Men’s side' });
     if (product.type === 'Oversized tees') slides.push({ label: 'Women’s styling' }, { label: 'Women’s side' });

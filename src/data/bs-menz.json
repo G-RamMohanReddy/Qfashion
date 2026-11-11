@@ -414,7 +414,6 @@
     "type": "Vests",
     "fabric": "Dot knit",
     "sellPrice": 200,
-    "styling": false,
     "photos": {
       "front": "/bs-menz/BSM-VEST06-front.jpeg",
       "back": "/bs-menz/BSM-VEST06-back.jpeg"
@@ -440,7 +439,8 @@
         "size": "XXL",
         "stock": 1
       }
-    ]
+    ],
+    "stylingPhoto": "/bs-menz/BSM-VEST06-styling.jpg"
   },
   {
     "id": "BSM-VEST07",
@@ -449,7 +449,6 @@
     "type": "Vests",
     "fabric": "Dot knit",
     "sellPrice": 200,
-    "styling": false,
     "photos": {
       "front": "/bs-menz/BSM-VEST07-front.jpeg",
       "back": "/bs-menz/BSM-VEST07-back.jpeg"
@@ -475,7 +474,8 @@
         "size": "XXL",
         "stock": 1
       }
-    ]
+    ],
+    "stylingPhoto": "/bs-menz/BSM-VEST07-styling.jpg"
   },
   {
     "id": "BSM-VEST08",
@@ -484,7 +484,6 @@
     "type": "Vests",
     "fabric": "Dot knit",
     "sellPrice": 200,
-    "styling": false,
     "photos": {
       "front": "/bs-menz/BSM-VEST08-front.jpeg",
       "back": "/bs-menz/BSM-VEST08-back.jpeg"
@@ -510,7 +509,8 @@
         "size": "XXL",
         "stock": 1
       }
-    ]
+    ],
+    "stylingPhoto": "/bs-menz/BSM-VEST08-styling.jpg"
   },
   {
     "id": "BSM-VEST09",
@@ -519,7 +519,6 @@
     "type": "Vests",
     "fabric": "Dot knit",
     "sellPrice": 200,
-    "styling": false,
     "photos": {
       "front": "/bs-menz/BSM-VEST09-front.jpeg",
       "back": "/bs-menz/BSM-VEST09-back.jpeg"
@@ -545,7 +544,8 @@
         "size": "XXL",
         "stock": 1
       }
-    ]
+    ],
+    "stylingPhoto": "/bs-menz/BSM-VEST09-styling.jpg"
   },
   {
     "id": "BSM-VEST10",
@@ -554,7 +554,6 @@
     "type": "Vests",
     "fabric": "Dot knit",
     "sellPrice": 200,
-    "styling": false,
     "photos": {
       "front": "/bs-menz/BSM-VEST10-front.jpeg",
       "back": "/bs-menz/BSM-VEST10-back.jpeg"
@@ -580,7 +579,8 @@
         "size": "XXL",
         "stock": 1
       }
-    ]
+    ],
+    "stylingPhoto": "/bs-menz/BSM-VEST10-styling.jpg"
   },
   {
     "id": "BSM-SWEAT01",
@@ -589,7 +589,6 @@
     "type": "Sweatshirts",
     "fabric": null,
     "sellPrice": 699,
-    "styling": false,
     "photos": {
       "front": "/bs-menz/BSM-SWEAT01-front.jpeg",
       "back": "/bs-menz/BSM-SWEAT01-back.jpeg"
@@ -615,7 +614,8 @@
         "size": "XXL",
         "stock": 1
       }
-    ]
+    ],
+    "stylingPhoto": "/bs-menz/BSM-SWEAT01-styling.jpg"
   },
   {
     "id": "BSM-SWEAT02",
@@ -624,7 +624,6 @@
     "type": "Sweatshirts",
     "fabric": null,
     "sellPrice": 699,
-    "styling": false,
     "photos": {
       "back": "/bs-menz/BSM-SWEAT02-back.jpeg"
     },
@@ -649,7 +648,9 @@
         "size": "XXL",
         "stock": 1
       }
-    ]
+    ],
+    "stylingPhoto": "/bs-menz/BSM-SWEAT02-styling.jpg",
+    "stylingLabel": "AI styling · back and rear angle"
   },
   {
     "id": "BSM-SWEAT03",
@@ -658,7 +659,6 @@
     "type": "Sweatshirts",
     "fabric": null,
     "sellPrice": 699,
-    "styling": false,
     "photos": {
       "front": "/bs-menz/BSM-SWEAT03-front.jpeg"
     },
@@ -683,7 +683,8 @@
         "size": "XXL",
         "stock": 1
       }
-    ]
+    ],
+    "stylingPhoto": "/bs-menz/BSM-SWEAT03-styling.jpg"
   },
   {
     "id": "BSM-SWEAT04",
@@ -692,7 +693,6 @@
     "type": "Sweatshirts",
     "fabric": null,
     "sellPrice": 699,
-    "styling": false,
     "photos": {
       "front": "/bs-menz/BSM-SWEAT04-front.jpeg",
       "back": "/bs-menz/BSM-SWEAT04-back.jpeg"
@@ -718,7 +718,8 @@
         "size": "XXL",
         "stock": 1
       }
-    ]
+    ],
+    "stylingPhoto": "/bs-menz/BSM-SWEAT04-styling.jpg"
   },
   {
     "id": "BSM-SWEAT05",
@@ -727,7 +728,6 @@
     "type": "Sweatshirts",
     "fabric": null,
     "sellPrice": 699,
-    "styling": false,
     "photos": {
       "front": "/bs-menz/BSM-SWEAT05-front.jpeg",
       "back": "/bs-menz/BSM-SWEAT05-back.jpeg"
@@ -753,6 +753,7 @@
         "size": "XXL",
         "stock": 1
       }
-    ]
+    ],
+    "stylingPhoto": "/bs-menz/BSM-SWEAT05-styling.jpg"
   }
 ]
