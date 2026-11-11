@@ -32,10 +32,11 @@ export default function App({ user, role, onAccount, onLogout }) {
   const accountAction = user ? () => openAccount() : onAccount;
   const openPanel = next => { if (user && next === 'orders') openAccount('orders'); else setPanel(next); };
   const [counts, setCounts] = useState({ saved: 0, bag: 0 });
+  const [bagCount, setBagCount] = useState(0);
   return <div className="min-h-screen bg-canvas new-edit">
     <a className="skip-link" href="#main-content">Skip to content</a>
     <div className="launch-strip">GUWAHATI, WE’RE GETTING READY. <span>A new local fashion story.</span></div>
-    <Header user={user} onAccount={accountAction} onLogout={onLogout} onPanel={openPanel} counts={counts} />
+    <Header user={user} onAccount={accountAction} onLogout={onLogout} onPanel={openPanel} counts={{ ...counts, bag: bagCount }} />
     <main id="main-content">
       {user && <div id="your-account"><Suspense fallback={<p className="page-section" role="status">Opening your account…</p>}><Marketplace user={user} role={role} activeTab={accountTab} onTabChange={setAccountTab} /></Suspense></div>}
       <section className="launch-hero" aria-labelledby="hero-title">
@@ -43,8 +44,8 @@ export default function App({ user, role, onAccount, onLogout }) {
         <div className="launch-art"><span className="art-index">THE FIRST CHAPTER / 01</span><span className="art-orbit" /><Garment /><span className="art-script">a little local,<br />a lot you.</span><span className="art-caption">AN ILLUSTRATED STYLE STUDY · NOT A PRODUCT FOR SALE</span></div>
       </section>
       <div className="values-strip"><span>LOCAL DISCOVERIES</span><span aria-hidden="true">✳</span><span>PERSONAL SUPPORT</span><span aria-hidden="true">✳</span><span>THOUGHTFUL DELIVERY</span></div>
-      <BsMenzCollection />
-      <CatalogPreview panel={panel} onPanel={setPanel} onCounts={setCounts} onAccount={onAccount} hideCollection />
+      <BsMenzCollection bagOpen={panel === 'bag'} onOpenBag={() => setPanel('bag')} onCloseBag={() => setPanel(null)} onBagCount={setBagCount} />
+      <CatalogPreview panel={panel === 'bag' ? null : panel} onPanel={setPanel} onCounts={setCounts} onAccount={onAccount} hideCollection />
       <section id="the-edit" className="page-section">
         <div className="section-heading"><div><p className="eyebrow">A GLIMPSE OF WHAT’S NEXT</p><h2>Find your kind of <em>everyday.</em></h2></div><p>Three moods. Plenty of possibilities.<br />A style preview while we curate the collection.</p></div>
         <div className="edit-grid">{edits.map(edit => <article key={edit.kind} className={'edit-card ' + edit.tone}><div className="edit-illustration"><span className="eyebrow">{edit.tag}</span><Garment kind={edit.kind} /><span className="illustration-label">STYLE ILLUSTRATION</span></div><div className="edit-caption"><h3>{edit.name}</h3><p>{edit.note}</p></div></article>)}</div>
@@ -58,7 +59,7 @@ export default function App({ user, role, onAccount, onLogout }) {
         <ol className="grid gap-4 md:grid-cols-3">
           <li className="card p-5"><h3 className="font-bold">Choose your size</h3><p className="text-sm mt-2">Open a BS Menz item and swipe through its photos. Select an available size and add it to your basket estimate.</p></li>
           <li className="card p-5"><h3 className="font-bold">Check the total</h3><p className="text-sm mt-2">The estimate shows item prices, GST and platform fees. Delivery is ₹100 for one item and free for two or more.</p></li>
-          <li className="card p-5"><h3 className="font-bold">Confirm delivery before paying</h3><p className="text-sm mt-2">When checkout opens, enter your delivery address and review the final total before paying online.</p></li>
+          <li className="card p-5"><h3 className="font-bold">Confirm delivery before paying</h3><p className="text-sm mt-2">Open your bag to preview the delivery address step. You’ll review your final total before paying online when orders open.</p></li>
         </ol>
         <a href="#collection" className="btn-primary mt-6">Back to the BS Menz collection</a>
       </section>

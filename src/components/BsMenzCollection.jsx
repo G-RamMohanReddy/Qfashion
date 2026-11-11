@@ -191,10 +191,94 @@ function ComboCard({ combo, basket, onAdd }) {
   </article>;
 }
 
-export default function BsMenzCollection() {
+const basketKey = 'qfashion.bs-menz.basket.v1';
+
+function readBasket() {
+  try {
+    const skus = JSON.parse(sessionStorage.getItem(basketKey) || '[]');
+    if (!Array.isArray(skus)) return [];
+    return products.flatMap(product => product.variants
+      .filter(variant => variant.stock > 0 && skus.includes(variant.sku))
+      .map(({ sku, size }) => ({ sku, size, name: product.name, type: product.type, sellPrice: product.sellPrice })));
+  } catch {
+    return [];
+  }
+}
+
+function BasketDialog({ basket, onRemove, onClose }) {
+  const ref = useRef(null);
+  const [step, setStep] = useState('bag');
+  const [address, setAddress] = useState(null);
+  useEffect(() => {
+    const previous = document.activeElement;
+    ref.current?.showModal();
+    return () => previous?.focus?.();
+  }, []);
+  function reviewDelivery(event) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setAddress(Object.fromEntries([...data].map(([key, value]) => [key, value.trim()])));
+    setStep('review');
+  }
+  return <dialog ref={ref} onClose={onClose} className="collection-dialog" aria-labelledby="bs-basket-heading">
+    <div className="dialog-heading">
+      <h2 id="bs-basket-heading">{step === 'bag' ? 'Your bag' : step === 'delivery' ? 'Delivery address' : 'Review delivery'}</h2>
+      <button type="button" className="btn-quiet" onClick={() => ref.current.close()}>Close</button>
+    </div>
+    <div className="space-y-4 p-5">
+      {step === 'bag' && (basket.length ? <>
+        <ul className="space-y-3">{basket.map(item => <li key={item.sku} className="flex items-center justify-between gap-3 text-sm">
+          <span>{item.name} · {item.size}</span>
+          <button type="button" className="underline" aria-label={'Remove ' + item.name + ' size ' + item.size} onClick={() => onRemove(item.sku)}>Remove</button>
+        </li>)}</ul>
+        <PriceBreakdown items={basket} />
+        <button type="button" className="btn-primary w-full" onClick={() => setStep('delivery')}>Enter delivery address</button>
+      </> : <>
+        <p className="text-sm">Choose a size on any BS Menz item to add it to your bag.</p>
+        <a href="#collection" className="btn-primary" onClick={onClose}>Browse the collection</a>
+      </>)}
+      {step === 'delivery' && <form onSubmit={reviewDelivery} className="space-y-4">
+        <label className="block text-sm font-medium">Flat or house number, building and street
+          <input name="street" required pattern=".*\S.*" maxLength={160} autoComplete="address-line1" className="field mt-1" defaultValue={address?.street} />
+        </label>
+        <label className="block text-sm font-medium">Area and nearby landmark
+          <input name="area" required pattern=".*\S.*" maxLength={120} autoComplete="address-line2" className="field mt-1" defaultValue={address?.area} />
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-sm font-medium">City or town
+            <input name="city" required pattern=".*\S.*" maxLength={80} autoComplete="address-level2" className="field mt-1" defaultValue={address?.city || 'Guwahati'} />
+          </label>
+          <label className="block text-sm font-medium">PIN code
+            <input name="pincode" required pattern="[1-9][0-9]{5}" maxLength={6} inputMode="numeric" autoComplete="postal-code" className="field mt-1" placeholder="6 digits" defaultValue={address?.pincode} />
+          </label>
+        </div>
+        <p className="text-sm text-muted">Delivery coverage and the final total will be confirmed when checkout opens.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button type="button" className="btn-quiet" onClick={() => setStep('bag')}>Back to bag</button>
+          <button type="submit" className="btn-primary">Review delivery</button>
+        </div>
+      </form>}
+      {step === 'review' && <>
+        <address className="rounded-lg border border-line bg-white p-3 text-sm not-italic">
+          <p>{address.street}</p><p>{address.area}</p><p>{address.city} · {address.pincode}</p>
+        </address>
+        <PriceBreakdown items={basket} />
+        <p className="notice" role="status">This is a preview. Online ordering and payment are coming soon.</p>
+        <button type="button" className="btn-quiet" onClick={() => setStep('delivery')}>Edit address</button>
+      </>}
+    </div>
+  </dialog>;
+}
+
+export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBagCount }) {
   const [type, setType] = useState('All');
   const [selected, setSelected] = useState(null);
-  const [basket, setBasket] = useState([]);
+  const [basket, setBasket] = useState(readBasket);
+  useEffect(() => {
+    onBagCount(basket.length);
+    try { sessionStorage.setItem(basketKey, JSON.stringify(basket.map(item => item.sku))); } catch { /* The bag works without storage. */ }
+  }, [basket, onBagCount]);
+  const removeItem = sku => setBasket(current => current.filter(row => row.sku !== sku));
   function addItems(items) {
     setBasket(current => current.some(row => items.some(item => item.sku === row.sku)) ? current : [...current, ...items]);
   }
@@ -207,10 +291,10 @@ export default function BsMenzCollection() {
       <ul className="space-y-2 mb-3">{basket.map(item => <li key={item.sku} className="flex gap-3 justify-between text-sm">
         <span>{item.name} · {item.size}</span>
         <button type="button" className="underline" aria-label={'Remove ' + item.name + ' size ' + item.size}
-          onClick={() => setBasket(current => current.filter(row => row.sku !== item.sku))}>Remove</button>
+          onClick={() => removeItem(item.sku)}>Remove</button>
       </li>)}</ul>
       <PriceBreakdown items={basket} />
-      <p className="text-xs text-muted mt-2">Price estimate only. Ordering opens after final tax and delivery checks.</p>
+      <button type="button" className="btn-primary mt-3" onClick={onOpenBag}>Review bag and delivery</button>
     </section>}
     <div className="flex flex-wrap gap-2 mb-5" aria-label="Filter products">
       {['All', 'Oversized tees', 'Vests', 'Sweatshirts'].map(option => <button type="button" key={option} aria-pressed={type === option} className={type === option ? 'chip chip-on' : 'chip'} onClick={() => setType(option)}>{option}</button>)}
@@ -240,6 +324,7 @@ export default function BsMenzCollection() {
         {combos.map(combo => <ComboCard key={combo.name} combo={combo} basket={basket} onAdd={addItems} />)}
       </div>
     </section>
+    {bagOpen && <BasketDialog basket={basket} onRemove={removeItem} onClose={onCloseBag} />}
     {selected && <ProductDialog key={selected.id} product={selected} basket={basket}
       onAdd={item => addItems([item])}
       onClose={() => setSelected(null)} />}
