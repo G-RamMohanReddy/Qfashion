@@ -18,7 +18,27 @@ const mixedCatalog = Array.from(
   { length: Math.max(...productGroups.map(([, group]) => group.length)) },
   (_, index) => productGroups.flatMap(([, group]) => group.slice(index, index + 1)),
 ).flat();
-const featuredProducts = productGroups.flatMap(([, group]) => group.slice(-1));
+const alternateCards = productGroups.flatMap(([, group]) => {
+  const product = group.find(item => item.photos.front && (item.photos.angle || item.photos.back));
+  return product ? [{ product, alternate: true }] : [];
+});
+const mixedCards = mixedCatalog.flatMap((product, index) => {
+  const alternate = (index + 1) % 5 === 0 ? alternateCards[(index + 1) / 5 - 1] : undefined;
+  const card = { product, alternate: false };
+  return alternate ? [card, alternate] : [card];
+});
+
+const shops = {
+  'BS Menz Shop': {
+    description: 'A local clothing shop with oversized tees, dot knit vests and crewneck sweatshirts.',
+    mapsUrl: 'https://maps.app.goo.gl/YTKYszPSDjZZ5Vpb9?g_st=iw',
+  },
+  Darkwolves: {
+    description: 'A streetwear shop with boxy graphic tees and heavyweight clasp hoodies.',
+    location: 'Khoka Market near IIT Guwahati, Amingaon, Kamrup 781039',
+    mapsUrl: 'https://maps.app.goo.gl/boq2qafbLm5CFw4fA?g_st=iw',
+  },
+};
 
 function estimate(items) {
   const itemPaise = items.reduce((sum, item) => sum + item.sellPrice * 100, 0);
@@ -150,13 +170,22 @@ function ProductDialog({ product, basket, onAdd, onClose }) {
   }, []);
   const sku = product.variants.find(variant => variant.size === size)?.sku;
   const inBasket = basket.some(item => item.sku === sku);
+  const shopName = product.retailer || 'BS Menz Shop';
+  const shop = shops[shopName];
   return <dialog ref={ref} onClose={onClose} className="collection-dialog collection-dialog-wide" aria-label={product.name}>
     <div className="dialog-heading"><h2>{product.name}</h2><button type="button" onClick={() => ref.current.close()} className="btn-quiet">Close</button></div>
     <div className="grid gap-6 p-5 md:grid-cols-2">
       <ProductGallery product={product} />
       <div className="space-y-3">
-        <p className="eyebrow">{product.retailer || 'BS Menz Shop'}</p>
         <p className="text-sm leading-relaxed">{productDescription(product)}</p>
+        {shop && <section aria-label="About the shop" className="rounded-lg border border-line bg-white p-3 text-sm">
+          <h3 className="font-semibold">{shopName}</h3>
+          <p className="mt-1">{shop.description}</p>
+          {shop.location && <p className="mt-1 text-muted">{shop.location}</p>}
+          <a href={shop.mapsUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block underline underline-offset-4">
+            View shop location on Google Maps
+          </a>
+        </section>}
         <dl className="grid grid-cols-2 gap-2 rounded-lg border border-line bg-white p-3 text-sm">
           <dt className="text-muted">Type</dt><dd className="font-medium">{productTypes[product.type]}</dd>
           <dt className="text-muted">Colour</dt><dd className="font-medium">{product.color}</dd>
@@ -293,10 +322,10 @@ function BasketDialog({ basket, onRemove, onClose }) {
   </dialog>;
 }
 
-function ProductCards({ products, onSelect, alternatePhotos = false }) {
+function ProductCards({ cards, onSelect }) {
   return <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-      {products.map(product => <button type="button" key={product.id} className="card flex min-w-0 flex-col overflow-hidden text-left transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={() => onSelect(product)}>
-        <img className="aspect-[4/5] w-full border-b border-line bg-white object-contain" src={(alternatePhotos && (product.photos.angle || product.photos.back)) || product.photos.front || product.photos.back} alt="" loading="lazy" />
+      {cards.map(({ product, alternate }) => <button type="button" key={product.id + (alternate ? '-angle' : '')} className="card flex min-w-0 flex-col overflow-hidden text-left transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={() => onSelect(product)}>
+        <img className="aspect-[4/5] w-full border-b border-line bg-white object-contain" src={(alternate && (product.photos.angle || product.photos.back)) || product.photos.front || product.photos.back} alt="" loading="lazy" />
         <div className="flex flex-1 flex-col p-3 sm:p-4">
           <p className="mb-2 flex items-center gap-2 text-xs text-muted">
             <span aria-hidden="true" className="h-4 w-4 shrink-0 rounded-full border border-black/25" style={{ backgroundColor: colourSwatches[product.color] }} />
@@ -306,7 +335,7 @@ function ProductCards({ products, onSelect, alternatePhotos = false }) {
           <p className="mb-2 mt-1 text-xs leading-relaxed text-muted">
             {product.fabric || productTypes[product.type]} · {product.variants.map(variant => variant.size).join(', ')}
           </p>
-          <p className="mb-2 text-xs text-muted">{product.retailer || 'BS Menz Shop'}</p>
+          {alternate && <p className="mb-2 text-xs text-muted">Another view</p>}
           <p className="mt-auto text-xl font-bold leading-tight tracking-tight sm:text-2xl">{inr(product.sellPrice)}</p>
           <p className="mt-1 text-xs font-semibold">Free delivery on 2+ items</p>
           <p className="text-xs text-muted">₹100 delivery for one item</p>
@@ -327,7 +356,9 @@ export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBag
   function addItems(items) {
     setBasket(current => current.some(row => items.some(item => item.sku === row.sku)) ? current : [...current, ...items]);
   }
-  const shown = type === 'All' ? mixedCatalog : catalog.filter(product => categories[type].includes(product.type));
+  const shown = type === 'All' ? mixedCards : catalog
+    .filter(product => categories[type].includes(product.type))
+    .map(product => ({ product, alternate: false }));
   return <section className="page-section collection-section" id="collection" aria-labelledby="collection-title">
     <span id="darkwolves" className="block scroll-mt-24" aria-hidden="true" />
     <div className="section-heading">
@@ -348,13 +379,9 @@ export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBag
     <div className="flex flex-wrap gap-2 mb-5" aria-label="Filter products">
       {['All', ...Object.keys(categories)].map(option => <button type="button" key={option} aria-pressed={type === option} className={type === option ? 'chip chip-on' : 'chip'} onClick={() => setType(option)}>{option}</button>)}
     </div>
-    <ProductCards products={shown} onSelect={setSelected} />
-    {type === 'All' && <section className="mt-10" aria-labelledby="featured-styles">
-      <h3 id="featured-styles" className="font-editorial text-3xl mb-4">Featured styles</h3>
-      <ProductCards products={featuredProducts} onSelect={setSelected} alternatePhotos />
-    </section>}
+    <ProductCards cards={shown} onSelect={setSelected} />
     <section className="mt-10" aria-labelledby="bs-combos">
-      <h3 id="bs-combos" className="font-editorial text-3xl mb-2">BS Menz combos</h3>
+      <h3 id="bs-combos" className="font-editorial text-3xl mb-2">Build a combo</h3>
       <p className="text-sm mb-4">Choose a size for each piece. Every combo saves ₹100 on delivery.</p>
       <div className="grid gap-4 md:grid-cols-3">
         {combos.map(combo => <ComboCard key={combo.name} combo={combo} basket={basket} onAdd={addItems} />)}
