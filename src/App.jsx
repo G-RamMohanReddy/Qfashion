@@ -14,12 +14,6 @@ const questions = [
   ['How do I request a return or exchange?', 'Email qfashion.shop1@gmail.com with your order ID and item within 24 hours of delivery. Return the original garment you received, unwashed, with its tags attached and intact. We cannot accept substitutes. You pay the courier fee for a return or exchange. We will confirm the fee with you before arranging pickup. If you received a wrong or faulty item, contact us for help.'],
   ['Who is Q Fashion for?', 'Our collection welcomes shoppers of every age and gender.'],
 ];
-function Garment({ kind = 'shirt' }) {
-  return <svg viewBox="0 0 320 360" fill="none" aria-hidden="true" className={'garment garment-' + kind}>
-    <ellipse cx="160" cy="325" rx="93" ry="13" fill="currentColor" opacity=".09" />
-    {kind === 'shirt' ? <g stroke="currentColor" strokeWidth="2"><path d="M113 69 76 83 28 146 76 181 97 154 88 298Q160 314 232 298L223 154 244 181 292 146 244 83 207 69Q160 91 113 69Z" fill="currentColor" fillOpacity=".17" /><path d="m113 69 26 44 21-25 21 25 26-44M160 90v213M109 145h32v35h-32zM76 83l21 71M244 83l-21 71" opacity=".65" /><path d="M168 138h1m-1 34h1m-1 34h1m-1 34h1m-1 34h1" strokeWidth="4" strokeLinecap="round" /></g> : kind === 'dress' ? <g stroke="currentColor" strokeWidth="2"><path d="m122 63-20 8-38 70 35 19 19-32 11 51-47 123q78 28 156 0l-47-123 11-51 19 32 35-19-38-70-20-8q-38 44-76 0Z" fill="currentColor" fillOpacity=".17" /><path d="M129 179h62M144 183l-26 119m42-119v130m16-130 26 119M122 63q38 62 76 0" opacity=".55" /></g> : <g stroke="currentColor" strokeWidth="2"><path d="M110 143v-32a50 50 0 0 1 100 0v32m-85 0v-32a35 35 0 0 1 70 0v32" /><path d="m86 138-15 161q89 25 178 0l-15-161Z" fill="currentColor" fillOpacity=".17" /><path d="M87 158h146M92 288q68 17 136 0M160 193v40m-20-20h40" opacity=".6" /></g>}
-  </svg>;
-}
 export default function App({ user, role, onAccount, onLogout }) {
   const [panel, setPanel] = useState(null);
   const [accountTab, setAccountTab] = useState('profile');
@@ -36,7 +30,10 @@ export default function App({ user, role, onAccount, onLogout }) {
       {user && <div id="your-account"><Suspense fallback={<p className="page-section" role="status">Opening your account…</p>}><Marketplace user={user} role={role} activeTab={accountTab} onTabChange={setAccountTab} /></Suspense></div>}
       <section className="launch-hero" aria-labelledby="hero-title">
         <div className="launch-copy"><p className="eyebrow">Q FASHION / THE NEIGHBOURHOOD EDIT</p><h1 id="hero-title">Good style.<br />Closer to <em>home.</em></h1><p>A fresh perspective on the shops around you.<br />Made for your everyday. Inspired by Guwahati.</p><div className="hero-actions"><a href="#collection" className="btn-primary">Explore the collection ↗</a><button className="btn-quiet" onClick={user ? () => document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' }) : onAccount}>{user ? 'Open my account' : isFirebaseConfigured ? 'Join Q Fashion' : 'Account preview'} →</button></div><div className="launch-note"><span className="launch-dot" /> BS Menz Shop and Darkwolves · Ordering coming soon</div></div>
-        <div className="launch-art"><span className="art-index">THE FIRST CHAPTER / 01</span><span className="art-orbit" /><Garment /><span className="art-script">a little local,<br />a lot you.</span><span className="art-caption">AN ILLUSTRATED STYLE STUDY · NOT A PRODUCT FOR SALE</span></div>
+        <figure className="launch-art">
+          <img src="/qfashion-streetwear-hero.jpg" alt="A man and a woman wearing oversized tees, sportswear and caps" fetchPriority="high" />
+          <figcaption>AI-generated styling inspiration</figcaption>
+        </figure>
       </section>
       <div className="values-strip"><span>LOCAL DISCOVERIES</span><span aria-hidden="true">✳</span><span>PERSONAL SUPPORT</span><span aria-hidden="true">✳</span><span>THOUGHTFUL DELIVERY</span></div>
       <BsMenzCollection bagOpen={panel === 'bag'} onOpenBag={() => setPanel('bag')} onCloseBag={() => setPanel(null)} onBagCount={setBagCount} />

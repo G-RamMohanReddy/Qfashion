@@ -192,14 +192,9 @@
 .hero-actions .btn-primary { padding:15px 22px; }
 .launch-note { font-size:10px; display:flex; gap:8px; align-items:center; color:#626958; }
 .launch-dot { width:6px; height:6px; border-radius:100%; background:#71805d; }
-.launch-art { background:#dfe3d6; position:relative; min-height:500px; overflow:hidden; margin:26px 6% 26px 0; display:flex; justify-content:center; align-items:center; }
-.art-index,.art-caption { position:absolute; font-size:8px; letter-spacing:.14em; z-index:1; }
-.art-index { top:28px; left:28px; }
-.art-caption { bottom:22px; left:28px; right:20px; }
-.art-orbit { position:absolute; width:380px; height:380px; border:1px solid #bdc7ae; border-radius:50%; background:#e9eadf; }
-.garment { width:80%; max-width:330px; position:relative; color:#536348; }
-.launch-art>.garment { width:90%; max-width:420px; transform:rotate(-9deg); }
-.art-script { position:absolute; bottom:66px; right:28px; font:italic 36px/1 'Cormorant Garamond',Georgia,serif; transform:rotate(-9deg); }
+.launch-art { background:#dfe3d6; position:relative; min-height:500px; overflow:hidden; margin:26px 6% 26px 0; }
+.launch-art img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 34%; }
+.launch-art figcaption { position:absolute; bottom:12px; left:12px; padding:5px 9px; border-radius:3px; background:#f6f4ed; color:#36422f; font-size:11px; }
 .values-strip { padding:22px 6%; display:flex; gap:30px; justify-content:center; align-items:center; background:#e9e6dc; font-size:9px; letter-spacing:.16em; }
 .page-section { max-width:1440px; padding:76px 6%; margin:auto; scroll-margin-top:20px; }
 .section-heading { display:flex; gap:20px; justify-content:space-between; align-items:flex-end; margin-bottom:30px; }
@@ -236,8 +231,8 @@
 .faq-section details p { font-size:13px; color:#626958; line-height:1.9; padding:0 24px 24px 0; }
 .join-banner { text-align:center; padding:60px 20px 70px; background:#e9e5d9; border-bottom:1px solid #d4cabb; }
 .join-banner>p:not(.eyebrow) { font-size:13px; color:#626958; margin:18px 0 25px; }
-@media(max-width:800px) { .store-header { flex-wrap:wrap; padding:18px 6%; } .store-header nav { order:3; width:100%; justify-content:space-between; gap:16px; padding-top:12px; } .launch-hero { grid-template-columns:1fr 1fr; min-height:480px; } .launch-copy { padding:40px 8% 40px 12%; } .launch-copy h1 { font-size:60px; } .launch-art { min-height:400px; } .art-orbit { width:260px; height:260px; } .art-script { font-size:28px; bottom:52px; } .art-caption { font-size:7px; left:16px; } .hero-actions { gap:6px; } .values-strip { gap:16px; font-size:8px; letter-spacing:.06em; } .edit-grid { gap:14px; } .edit-caption h3 { font-size:25px; } .edit-illustration>.eyebrow { left:12px; top:14px; font-size:8px; } }
-@media(max-width:560px) { .launch-strip { font-size:8px; letter-spacing:.1em; } .launch-strip span { display:none; } .store-wordmark { font-size:42px; } .store-wordmark>span { font-size:15px; } .store-header nav { font-size:11px; } .launch-hero { grid-template-columns:1fr; } .launch-copy { padding:45px 6% 30px; } .launch-copy h1 { font-size:70px; } .launch-art { margin:0 6% 30px; min-height:350px; } .launch-art>.garment { max-width:290px; } .art-script { right:20px; bottom:52px; } .values-strip { gap:12px; font-size:7px; padding:20px 4%; } .page-section { padding:48px 6%; } .section-heading { display:block; } .section-heading>p { margin-top:16px; } .edit-grid { grid-template-columns:1fr; gap:20px; } .edit-illustration { aspect-ratio:1.2; } .edit-illustration>.garment { max-width:270px; } .edit-caption { padding:14px 0 0; } .delivery-story { grid-template-columns:1fr; padding:46px 6%; gap:20px; } .faq-section { grid-template-columns:1fr; gap:24px; } }
+@media(max-width:800px) { .store-header { flex-wrap:wrap; padding:18px 6%; } .store-header nav { order:3; width:100%; justify-content:space-between; gap:16px; padding-top:12px; } .launch-hero { grid-template-columns:1fr 1fr; min-height:480px; } .launch-copy { padding:40px 8% 40px 12%; } .launch-copy h1 { font-size:60px; } .launch-art { min-height:400px; } .hero-actions { gap:6px; } .values-strip { gap:16px; font-size:8px; letter-spacing:.06em; } .edit-grid { gap:14px; } .edit-caption h3 { font-size:25px; } .edit-illustration>.eyebrow { left:12px; top:14px; font-size:8px; } }
+@media(max-width:560px) { .launch-strip { font-size:8px; letter-spacing:.1em; } .launch-strip span { display:none; } .store-wordmark { font-size:42px; } .store-wordmark>span { font-size:15px; } .store-header nav { font-size:11px; } .launch-hero { grid-template-columns:1fr; } .launch-copy { padding:45px 6% 30px; } .launch-copy h1 { font-size:70px; } .launch-art { margin:0 6% 30px; min-height:0; aspect-ratio:4/5; } .values-strip { gap:12px; font-size:7px; padding:20px 4%; } .page-section { padding:48px 6%; } .section-heading { display:block; } .section-heading>p { margin-top:16px; } .edit-grid { grid-template-columns:1fr; gap:20px; } .edit-illustration { aspect-ratio:1.2; } .edit-illustration>.garment { max-width:270px; } .edit-caption { padding:14px 0 0; } .delivery-story { grid-template-columns:1fr; padding:46px 6%; gap:20px; } .faq-section { grid-template-columns:1fr; gap:24px; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
 
 /* Collection and shopping screens, ready for the owner's catalog assets. */
