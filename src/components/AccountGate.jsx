@@ -8,6 +8,7 @@ export default function AccountGate() {
   const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(true), [browse, setBrowse] = useState(() => new URLSearchParams(window.location.search).get('account') !== '1');
   const [mode, setMode] = useState('login'), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [resendAt, setResendAt] = useState(0), [clock, setClock] = useState(Date.now());
   const cooldown = Math.max(0, Math.ceil((resendAt - clock) / 1000));
   useEffect(() => { if (!cooldown) return; const timer = setTimeout(() => setClock(Date.now()), 1000); return () => clearTimeout(timer); }, [cooldown]);
@@ -49,9 +50,16 @@ export default function AccountGate() {
   const perform = async fn => {
     setBusy(true); setMessage('');
     try { await fn(); } catch (error) {
-      const messages = { 'auth/invalid-credential': 'Check your email and password.', 'auth/email-already-in-use': 'An account already uses this email.', 'auth/unauthorized-domain': 'Sign-in is not enabled for this preview address.', 'auth/too-many-requests': 'Please wait before trying again.', 'auth/popup-blocked': 'Allow the Google sign-in popup, then try again.', 'auth/popup-closed-by-user': 'Google sign-in was closed. Try again when ready.', 'auth/network-request-failed': 'Check your internet connection and try again.', 'auth/weak-password': 'Use a password with at least 10 characters.', 'auth/user-token-expired': 'Please sign out and sign in again to refresh your account.', 'auth/invalid-action-code': 'That link expired or was already used. Request a fresh verification email.', 'auth/expired-action-code': 'That link expired. Request a fresh verification email.' };
+      const messages = { 'auth/invalid-credential': 'Check your email and password.', 'auth/email-already-in-use': 'An account already uses this email.', 'auth/unauthorized-domain': 'Sign-in is not enabled for this preview address.', 'auth/too-many-requests': 'Please wait before trying again.', 'auth/popup-blocked': 'Your browser blocked Google sign-in. Allow pop-ups for qfashion.shop or open this page in Safari or Chrome, then try again.', 'auth/web-storage-unsupported': 'Open Q Fashion in Safari or Chrome to use Google sign-in.', 'auth/popup-closed-by-user': 'Google sign-in was closed. Try again when ready.', 'auth/network-request-failed': 'Check your internet connection and try again.', 'auth/weak-password': 'Use a password with at least 10 characters.', 'auth/user-token-expired': 'Please sign out and sign in again to refresh your account.', 'auth/invalid-action-code': 'That link expired or was already used. Request a fresh verification email.', 'auth/expired-action-code': 'That link expired. Request a fresh verification email.' };
       setMessage(messages[error.code] || 'Could not complete sign-in. Please try again.');
     } finally { setBusy(false); }
+  };
+  const googleSignIn = () => {
+    setGoogleBusy(true);
+    return perform(async () => {
+      const { auth, sdk } = await authClient();
+      await sdk.signInWithPopup(auth, new sdk.GoogleAuthProvider());
+    }).finally(() => setGoogleBusy(false));
   };
   const logout = () => perform(async () => { const { auth, sdk } = await authClient(); await sdk.signOut(auth); setMode('login'); setMessage(''); setBrowse(true); });
   const submit = event => {
@@ -73,7 +81,7 @@ export default function AccountGate() {
     <section className="auth-story"><a href="/" className="wordmark">Q <span>FASHION</span></a><p className="eyebrow">THE NEIGHBOURHOOD EDIT</p><h1>Your city.<br />Your style.<br /><em>Your moment.</em></h1><p>Discover a new way to dress, from the shops around you.</p><div className="auth-orbit" aria-hidden="true">Q</div><span className="auth-caption">A LITTLE LOCAL. A LOT YOU.</span></section>
     <section className="auth-card"><p className="eyebrow">YOUR NEXT CHAPTER</p><h2>{mode === 'signup' ? 'A beautiful beginning.' : mode === 'reset' ? 'Find your way back.' : 'Welcome to your edit.'}</h2><p className="text-muted mb-6">{mode === 'signup' ? 'Create your Q Fashion account.' : mode === 'reset' ? 'We’ll send a password reset link.' : 'Sign in. Find something that feels like you.'}</p>
       {!isFirebaseConfigured && <p className="notice">Account setup is in progress. Sign-in and ordering are not open on this address yet. Explore Q Fashion or contact the founder for updates.</p>}
-      {mode !== 'reset' && <button disabled={busy || !isFirebaseConfigured} className="btn-primary w-full py-3.5" onClick={() => perform(async () => { const { auth, sdk } = await authClient(); await sdk.signInWithPopup(auth, new sdk.GoogleAuthProvider()); })}>Continue with Google</button>}
+      {mode !== 'reset' && <button disabled={busy || !isFirebaseConfigured} className="btn-primary w-full py-3.5" onClick={googleSignIn}>{googleBusy ? 'Connecting to Google…' : 'Continue with Google'}</button>}
       {mode !== 'reset' && <p className="text-sm text-muted mt-3 mb-6">Use your verified Google account to skip the email link.</p>}
       {mode !== 'reset' && <p className="eyebrow mb-3">Or continue with email</p>}
       <form onSubmit={submit} className="space-y-4">

@@ -5,11 +5,19 @@ export function authClient() {
     const app = await getApp();
     if (!app) throw new Error('Sign-in is not configured yet.');
     const sdk = await import('firebase/auth'), auth = sdk.getAuth(app);
-    await sdk.setPersistence(auth, sdk.browserSessionPersistence);
     await auth.authStateReady();
+    // Migrate existing session-only users and keep new sign-ins across browser restarts.
+    try {
+      await sdk.setPersistence(auth, sdk.browserLocalPersistence);
+    } catch {
+      // Storage-restricted browsers can still use the SDK's available persistence.
+    }
     auth.languageCode = 'en';
     return { auth, sdk };
-  })();
+  })().catch(error => {
+    promise = undefined;
+    throw error;
+  });
   return promise;
 }
 export async function api(action, data = {}) {
