@@ -4,6 +4,7 @@ import BsMenzCollection from './components/BsMenzCollection.jsx';
 import CatalogPreview from './components/CatalogPreview.jsx';
 import AboutUs from './components/AboutUs.jsx';
 import { isFirebaseConfigured } from '@/lib/firebase.js';
+const PaymentModal = lazy(() => import('./components/PaymentModal.jsx'));
 const Marketplace = lazy(() => import('./components/Marketplace.jsx'));
 const questions = [
   ['Can I order now?', 'Browse the collection and check the available sizes for each item. Ordering opens after final prices and delivery coverage are confirmed.'],
@@ -16,6 +17,7 @@ const questions = [
 ];
 export default function App({ user, role, onAccount, onLogout }) {
   const [panel, setPanel] = useState(null);
+  const [pilotPayment, setPilotPayment] = useState(null);
   const [accountTab, setAccountTab] = useState('profile');
   const openAccount = (tab = 'profile') => { setAccountTab(tab); document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' }); };
   const accountAction = user ? () => openAccount() : onAccount;
@@ -36,7 +38,18 @@ export default function App({ user, role, onAccount, onLogout }) {
         </figure>
       </section>
       <div className="values-strip"><span>LOCAL DISCOVERIES</span><span aria-hidden="true">✳</span><span>PERSONAL SUPPORT</span><span aria-hidden="true">✳</span><span>THOUGHTFUL DELIVERY</span></div>
-      <BsMenzCollection bagOpen={panel === 'bag'} onOpenBag={() => setPanel('bag')} onCloseBag={() => setPanel(null)} onBagCount={setBagCount} />
+      <BsMenzCollection bagOpen={panel === 'bag'} onOpenBag={() => setPanel('bag')} onCloseBag={() => setPanel(null)} onBagCount={setBagCount}
+        user={user} onAccount={onAccount}
+        onPayment={(checkout, clearBag) => setPilotPayment({ checkout, clearBag })} />
+      {pilotPayment && <Suspense fallback={<p role="status">Opening payment…</p>}>
+        <PaymentModal open checkout={pilotPayment.checkout}
+          onClose={() => { setPilotPayment(null); openAccount('orders'); }}
+          onSuccess={(_, status) => {
+            if (status === 'paid') pilotPayment.clearBag();
+            setPilotPayment(null);
+            openAccount('orders');
+          }} />
+      </Suspense>}
       <CatalogPreview panel={panel === 'bag' ? null : panel} onPanel={setPanel} onCounts={setCounts} onAccount={onAccount} hideCollection />
       <section className="delivery-story" id="delivery"><div><p className="eyebrow">FROM A LOCAL SHOP TO YOUR DOOR</p><h2>A personal touch.<br /><em>Every step of the way.</em></h2><p>We’re building delivery around clear updates and a person you can reach. Your order will move forward when each step is confirmed.</p><a href="#questions" className="text-sm underline underline-offset-4">How delivery will work →</a></div><ol className="delivery-steps">{[['01', 'Made ready for you', 'Preparation and packaging at the shop.'], ['02', 'Collected with care', 'Q Fashion arranges a local courier for pickup.'], ['03', 'On its way home', 'An estimated arrival window and confirmed order updates.']].map(([number, title, copy]) => <li key={number}><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></li>)}</ol></section>
 

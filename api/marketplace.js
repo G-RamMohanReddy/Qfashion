@@ -2,6 +2,7 @@ import { randomInt, createHash, timingSafeEqual } from 'node:crypto';
 import { AggregateField, FieldPath } from 'firebase-admin/firestore';
 import { services, authenticate, routeAuthentication } from '../server/admin.js';
 import { releaseExpiredReservations } from '../server/reservations.js';
+import { prepareRazorpay, razorpayConfig, verifyRazorpay, verifyRazorpayRefund } from '../server/razorpay.js';
 import { UPI_ID, requireValue, text, integer, eta, upiLink, paymentReference, canTransition, validateAddress, quoteLines, withinDeliveryArea } from '../server/domain.js';
 
 const id = value => { requireValue(typeof value === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(value), 'Invalid identifier'); return value; };
@@ -121,12 +122,42 @@ return async function handler(req, res) {
       const ref = db.doc(`orders/${id(input.orderId)}`), order = (await ref.get()).data();
       requireValue(order?.uid === actor.uid, 'Order not found', 404);
       requireValue(order.status === 'awaiting_payment' && order.expiresAt > now(), 'Payment window closed; do not pay again', 409);
+      if (order.paymentMethod === 'razorpay') {
+        return res.json(await prepareRazorpay(db, { id: ref.id, ...order }, razorpayConfig()));
+      }
       manualEnabled();
       return res.json({ order: { id: ref.id, ...order }, upiUri: upiLink({ amountPaise: order.totalPaise, reference: ref.id }) });
     }
-    if (action === 'checkout') {
-      manualEnabled();
-      const address = validateAddress(input.address), checkoutId = id(input.checkoutId);
+    if (action === 'findDeliveryPin') {
+      razorpayConfig();
+      const pincode = text(input.pincode, 6);
+      requireValue(/^[1-9][0-9]{5}$/.test(pincode), 'Enter a six-digit PIN code');
+      const key = process.env.GOOGLE_GEOCODING_SERVER_KEY;
+      requireValue(key, 'Address search is temporarily unavailable. You can use your current location if you are at the delivery address.', 503);
+      const query = new URLSearchParams({ address: text(input.line, 300), components: 'country:IN|postal_code:' + pincode, key });
+      const response = await fetch('https://maps.googleapis.com/maps/api/geocode/json?' + query, { signal: AbortSignal.timeout(8000) });
+      requireValue(response.ok, 'Address search is temporarily unavailable', 503);
+      const data = await response.json();
+      requireValue(['OK', 'ZERO_RESULTS'].includes(data.status), 'Address search is temporarily unavailable', 503);
+      const candidates = (data.results || []).filter(result =>
+        !result.partial_match && ['ROOFTOP', 'RANGE_INTERPOLATED'].includes(result.geometry?.location_type) &&
+        result.address_components?.some(part => part.types.includes('postal_code') && part.long_name === pincode)
+      ).slice(0, 5).map(result => ({ label: result.formatted_address, lat: result.geometry.location.lat, lng: result.geometry.location.lng }));
+      return res.json({ candidates });
+    }
+    if (action === 'checkout' || action === 'deliveryQuote') {
+      const gateway = process.env.QF_PAYMENT_PROVIDER === 'razorpay' ? razorpayConfig() : null;
+      if (!gateway) manualEnabled();
+      requireValue(action !== 'deliveryQuote' || gateway, 'Online payments are not open yet', 503);
+      const checkoutId = action === 'checkout' ? id(input.checkoutId) : null;
+      if (gateway && checkoutId) {
+        const existing = (await db.doc(`orders/${checkoutId}`).get()).data();
+        if (existing) {
+          requireValue(existing.uid === actor.uid && existing.paymentMethod === 'razorpay', 'Checkout conflict', 409);
+          return res.json(await prepareRazorpay(db, { id: checkoutId, ...existing }, gateway));
+        }
+      }
+      const address = validateAddress(input.address);
       const lines = input.lines;
       requireValue(Array.isArray(lines) && lines.length > 0 && lines.length <= 30, 'Invalid bag');
       const refs = lines.map(l => db.doc(`variants/${id(l.variantId)}`));
@@ -136,9 +167,13 @@ return async function handler(req, res) {
       const vendorIds = [...new Set(items.map(i => i.vendorId))];
       requireValue(vendorIds.length === 1, 'Please check out one vendor at a time');
       const vendor = (await db.doc(`vendors/${id(vendorIds[0])}`).get()).data();
-      requireValue(vendor?.active === true && vendor.pincodes?.includes(address.pincode), 'This vendor does not deliver to that pincode');
+      requireValue(vendor?.active === true && vendor.pincodes?.includes(address.pincode), 'This shop does not deliver to that PIN code');
       requireValue(withinDeliveryArea(vendor.pickup, address, vendor.radiusKm), 'Delivery pin is outside the vendor’s local delivery area');
       const timings = await estimateRoute(vendor, address);
+      const pricing = orderPricing(items, vendor, Boolean(gateway));
+      const quoteKey = hash(JSON.stringify({ uid: actor.uid, address, items, vendor, pricing }));
+      if (action === 'deliveryQuote') return res.json({ ...pricing, eta: timings, quoteKey });
+      if (gateway) requireValue(input.quoteKey === quoteKey, 'Your price or delivery details changed. Review delivery again.', 409);
       const result = await db.runTransaction(async tx => {
         const orderRef = db.doc(`orders/${checkoutId}`), existing = await tx.get(orderRef);
         if (existing.exists) {
@@ -152,13 +187,10 @@ return async function handler(req, res) {
         requireValue(JSON.stringify(currentVendor.data()) === JSON.stringify(vendor), 'Delivery settings changed. Try again', 409);
         const fresh = await tx.getAll(...refs), current = quoteLines(lines, fresh.map(s => s.data()));
         requireValue(JSON.stringify(current) === JSON.stringify(items), 'Prices changed. Review your bag', 409);
-        const deliveryFeePaise = vendor.deliveryFeePaise;
-        requireValue(Number.isSafeInteger(deliveryFeePaise) && deliveryFeePaise > 0, "Delivery fee is not set for this shop yet", 409);
-        const itemsTotalPaise = current.reduce((s, i) => s + i.pricePaise * i.qty, 0);
-        const totalPaise = itemsTotalPaise + deliveryFeePaise;
-        requireValue(totalPaise <= 10000000, 'Order exceeds limit');
+
         const order = { uid: actor.uid, customer: { uid: actor.uid, email: actor.email || null, name: address.name, phone: address.phone }, vendorId: vendorIds[0], vendorName: text(vendor.name, 100), vendorSnapshot: vendor, items: current, address,
-          totalPaise, currency: 'INR', payee: UPI_ID, paymentMethod: 'manual_upi', priceIncludesTax: true, itemsTotalPaise, deliveryFeePaise, packagingFeePaise: 0, status: 'awaiting_payment', paymentStatus: 'pending',
+          ...pricing, currency: 'INR', payee: gateway ? null : UPI_ID, paymentMethod: gateway ? 'razorpay' : 'manual_upi',
+          priceIncludesTax: !gateway, packagingFeePaise: 0, status: 'awaiting_payment', paymentStatus: 'pending',
           riderId: null, eta: timings, createdAt: now(), updatedAt: now(), expiresAt: now() + 30 * 60000,
           history: [{ status: 'awaiting_payment', ts: now(), actor: actor.uid }] };
         current.forEach((line, i) => tx.update(refs[i], { stock: fresh[i].data().stock - line.qty }));
@@ -167,13 +199,24 @@ return async function handler(req, res) {
         return { id: checkoutId, ...order };
       });
       requireValue(result.status === 'awaiting_payment' && result.expiresAt > now(), 'Checkout is no longer payable', 409);
+      if (gateway) {
+        requireValue(result.paymentMethod === 'razorpay', 'Checkout conflict', 409);
+        return res.json(await prepareRazorpay(db, result, gateway));
+      }
       return res.json({ order: result, upiUri: upiLink({ amountPaise: result.totalPaise, reference: checkoutId }) });
+    }
+    if (action === 'confirmRazorpay') {
+      const ref = db.doc(`orders/${id(input.orderId)}`);
+      const order = (await ref.get()).data();
+      requireValue(order?.uid === actor.uid && order.paymentMethod === 'razorpay', 'Order not found', 404);
+      return res.json(await verifyRazorpay(db, order, input, razorpayConfig()));
     }
     if (action === 'submitPayment') {
       const reference = paymentReference(input.reference), ref = db.doc(`orders/${id(input.orderId)}`);
       await db.runTransaction(async tx => {
         const order = (await tx.get(ref)).data();
         requireValue(order?.uid === actor.uid, 'Order not found', 404);
+        requireValue(order.paymentMethod !== 'razorpay', 'Gateway payments are verified by Razorpay', 409);
         requireValue(order.status === 'awaiting_payment' && order.expiresAt > now(), 'Payment window closed; contact support if you paid', 409);
         tx.update(ref, { paymentStatus: 'awaiting_verification', status: 'awaiting_verification', submittedReference: reference, submittedAt: now(), updatedAt: now(), history: [...order.history, { status: 'awaiting_verification', ts: now(), actor: actor.uid }] });
       });
@@ -257,6 +300,23 @@ return async function handler(req, res) {
       await db.doc(`vendors/${id(v.id)}`).set({ name: text(v.name, 100), active: v.active === true, pincodes: v.pincodes, radiusKm: integer(v.radiusKm, 1, 50), pickup, deliveryFeePaise: integer(v.deliveryFeePaise, 1, 10000000), ...timings, updatedAt: now() });
       return res.json({ status: 'saved' });
     }
+    if (action === 'recordGatewayRefund') {
+      admin(actor);
+      const ref = db.doc(`orders/${id(input.orderId)}`);
+      const order = (await ref.get()).data();
+      requireValue(order?.paymentMethod === 'razorpay' && order.paymentStatus === 'refund_review', 'Order does not require a gateway refund', 409);
+      const note = text(input.note, 500);
+      const amountPaise = await verifyRazorpayRefund(order, input.refundId, razorpayConfig());
+      await db.runTransaction(async tx => {
+        const current = (await tx.get(ref)).data();
+        requireValue(current?.paymentStatus === 'refund_review' && !current.refund &&
+          current.gatewayPaymentId === order.gatewayPaymentId, 'Refund already recorded or order changed', 409);
+        tx.update(ref, { refund: { amountPaise, gatewayRefundId: input.refundId, note, recordedBy: actor.uid, recordedAt: now() },
+          paymentStatus: amountPaise === current.totalPaise ? 'refunded' : 'partially_refunded', updatedAt: now(),
+          history: [...current.history, { status: 'refund_recorded', ts: now(), actor: actor.uid }] });
+      });
+      return res.json({ status: 'refund_recorded' });
+    }
     if (action === 'recordRefund') {
       admin(actor);
       const ref = db.doc(`orders/${id(input.orderId)}`), amountPaise = integer(input.amountPaise, 1, 10000000);
@@ -264,6 +324,7 @@ return async function handler(req, res) {
       await db.runTransaction(async tx => {
         const order = (await tx.get(ref)).data();
         requireValue(order, 'Order not found', 404);
+        requireValue(order.paymentMethod !== 'razorpay', 'Use the Razorpay refund ID for this order', 409);
         requireValue(order.paymentStatus === 'refund_review', 'Cancel the order and review payment before recording a refund', 409);
         requireValue(amountPaise <= order.totalPaise && !order.refund, 'Refund needs review', 409);
         tx.update(ref, { refund: { amountPaise, bankReference: reference, note, recordedBy: actor.uid, recordedAt: now() }, paymentStatus: amountPaise === order.totalPaise ? 'refunded' : 'partially_refunded', updatedAt: now(), history: [...order.history, { status: 'refund_recorded', ts: now(), actor: actor.uid }] });
@@ -280,6 +341,7 @@ return async function handler(req, res) {
         requireValue(!old || old.vendorId === vendorId, 'Cannot move another vendor’s variant', 403);
         // Vendors submit drafts; only admin can publish or change authoritative stock.
         const record = { vendorId, name: text(v.name), size: text(v.size, 30), color: text(v.color, 30), pricePaise: integer(v.pricePaise, 100, 10000000), image,
+          productType: v.productType ? text(v.productType, 60) : (old?.productType || null),
           published: actor.role === 'admin' && v.published === true, stock: actor.role === 'admin' ? integer(v.stock, 0, 100000) : (old?.stock || 0), updatedAt: now() };
         tx.set(ref, record);
       }); return res.json({ status: 'saved' });
@@ -292,6 +354,18 @@ return async function handler(req, res) {
 }
 }
 export default createHandler();
+
+function orderPricing(items, vendor, gateway) {
+  const itemsTotalPaise = items.reduce((sum, item) => sum + item.lineTotalPaise, 0);
+  const quantity = items.reduce((sum, item) => sum + item.qty, 0);
+  const deliveryFeePaise = gateway ? (quantity >= 2 ? 0 : 10000) : integer(vendor.deliveryFeePaise, 1, 10000000);
+  const apparelTaxPaise = gateway ? Math.round(itemsTotalPaise * 0.05) : 0;
+  const platformFeePaise = gateway ? items.reduce((sum, item) =>
+    sum + item.qty * (['Oversized tees', 'Boxy tees'].includes(item.productType) ? 2250 : 1000), 0) : 0;
+  const totalPaise = itemsTotalPaise + apparelTaxPaise + platformFeePaise + deliveryFeePaise;
+  requireValue(totalPaise <= 10000000, 'Order exceeds limit');
+  return { itemsTotalPaise, apparelTaxPaise, platformFeePaise, deliveryFeePaise, totalPaise };
+}
 
 async function routeEstimate(vendor, address) {
   const routeHeaders = await routeAuthentication();

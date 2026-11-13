@@ -47,6 +47,8 @@ export function canTransition(order, action, actor) {
 }
 export function validateAddress(value) {
   requireValue(value && typeof value === 'object', 'Delivery address required');
+  requireValue([value.lat, value.lng].every(coordinate => typeof coordinate === 'number' ||
+    typeof coordinate === 'string' && coordinate.trim()), 'Confirm a delivery pin');
   const lat = Number(value.lat), lng = Number(value.lng);
   requireValue(Number.isFinite(lat) && Math.abs(lat) <= 90 && Number.isFinite(lng) && Math.abs(lng) <= 180, 'Valid map coordinates required');
   requireValue(/^[1-9][0-9]{5}$/.test(value.pincode), 'Valid Indian pincode required');
@@ -62,6 +64,6 @@ export function quoteLines(lines, documents) {
     requireValue(variant && variant.published === true, 'An item is unavailable', 409);
     integer(line.qty, 1, 10); integer(variant.pricePaise, 100, 10000000);
     requireValue(variant.stock >= line.qty, 'Insufficient stock', 409);
-    return { variantId: line.variantId, vendorId: text(variant.vendorId, 80), name: text(variant.name), size: text(variant.size, 30), color: text(variant.color, 30), image: variant.image || null, qty: line.qty, pricePaise: variant.pricePaise, lineTotalPaise: line.qty * variant.pricePaise };
+    return { variantId: line.variantId, vendorId: text(variant.vendorId, 80), name: text(variant.name), size: text(variant.size, 30), productType: variant.productType || null, color: text(variant.color, 30), image: variant.image || null, qty: line.qty, pricePaise: variant.pricePaise, lineTotalPaise: line.qty * variant.pricePaise };
   });
 }
