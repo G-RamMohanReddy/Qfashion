@@ -170,6 +170,8 @@ return async function handler(req, res) {
       requireValue(vendor?.active === true && vendor.pincodes?.includes(address.pincode), 'This shop does not deliver to that PIN code');
       requireValue(withinDeliveryArea(vendor.pickup, address, vendor.radiusKm), 'Delivery pin is outside the vendor’s local delivery area');
       const timings = await estimateRoute(vendor, address);
+      if (gateway) requireValue(items.every(item => ['Oversized tees', 'Boxy tees', 'Vests', 'Sweatshirts', 'Hoodies'].includes(item.productType)),
+        'A product is missing its verified price category. Contact Q Fashion.', 409);
       const pricing = orderPricing(items, vendor, Boolean(gateway));
       const quoteKey = hash(JSON.stringify({ uid: actor.uid, address, items, vendor, pricing }));
       if (action === 'deliveryQuote') return res.json({ ...pricing, eta: timings, quoteKey });

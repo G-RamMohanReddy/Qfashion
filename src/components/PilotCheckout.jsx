@@ -66,8 +66,9 @@ export default function PilotCheckout({ user, basket, onAccount, onPayment }) {
     if (!pin) return;
     run(async () => {
       setQuote(null);
-      checkoutId.current = null;
-      setQuote(await api('deliveryQuote', payload()));
+      const result = await api('deliveryQuote', payload());
+      if (quote?.quoteKey !== result.quoteKey) checkoutId.current = null;
+      setQuote(result);
     });
   }} className="space-y-3">
     <fieldset disabled={busy} className="space-y-3">
