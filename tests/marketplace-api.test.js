@@ -1,3 +1,6 @@
+import { createHmac } from 'node:crypto';
+import webhook from '../api/razorpay-webhook.js';
+import { recordCapturedPayment } from '../server/razorpay.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHandler } from '../api/marketplace.js';
@@ -29,7 +32,7 @@ function harness(seed = {}) {
     await handler({ method: 'POST', headers: {}, actor, body: { action, ...data } }, response);
     return { code: response.code || 200, ...response.body };
   };
-  return { rows, call };
+  return { rows, call, db };
 }
 const customer = { uid: 'customer1', role: 'customer', email: 'test@example.invalid' };
 const administrator = { uid: 'admin1', role: 'admin' };
@@ -133,4 +136,67 @@ test('saved addresses stay scoped to the caller and cannot exceed five', async (
   assert.equal(rows.get('customers/customer1').addresses.length, 5);
   assert.equal((await call(customer, 'deleteAddress', { addressId: 'address0' })).code, 200);
   assert.equal(rows.get('customers/customer1').addresses.length, 4);
+});
+
+test('Razorpay pilot quotes real prices before stock reservation and handles retries and late capture', async t => {
+  const config = { QF_PAYMENT_PROVIDER: 'razorpay', RAZORPAY_MODE: 'test', VERCEL_ENV: 'preview',
+    FIREBASE_PROJECT_ID: 'qfashion-staging-20261101', RAZORPAY_KEY_ID: 'rzp_test_mock', RAZORPAY_KEY_SECRET: 'mock-secret', RAZORPAY_WEBHOOK_SECRET: 'mock-webhook' };
+  for (const [key, value] of Object.entries(config)) {
+    const old = process.env[key];
+    process.env[key] = value;
+    t.after(() => { if (old === undefined) delete process.env[key]; else process.env[key] = old; });
+  }
+  const { rows, call, db } = harness({ ...data(), 'variants/sku1': { ...variant, productType: 'Oversized tees' },
+    'variants/sku2': { ...variant, vendorId: 'vendor2' } });
+  const lines = [{ variantId: 'sku1', qty: 2 }];
+  const request = { address, lines };
+  const quote = await call(customer, 'deliveryQuote', request);
+  assert.equal(quote.code, 200);
+  assert.equal(quote.deliveryFeePaise, 0);
+  assert.equal(quote.apparelTaxPaise, 9990);
+  assert.equal(quote.platformFeePaise, 4500);
+  assert.equal(quote.eta.components.buffer, 5);
+  assert.equal(rows.get('variants/sku1').stock, 2);
+  assert.equal((await call(customer, 'deliveryQuote', { address: { ...address, pincode: '781039' }, lines })).code, 400);
+  assert.equal((await call(customer, 'deliveryQuote', { address, lines: [...lines, { variantId: 'sku2', qty: 1 }] })).code, 400);
+  assert.equal((await call(customer, 'checkout', { ...request, checkoutId: 'pilot1', quoteKey: 'incorrect' })).code, 409);
+  let created = 0;
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (url.endsWith('/orders')) {
+      created++;
+      return Response.json({ id: 'order_TEST1', amount: JSON.parse(options.body).amount, currency: 'INR' });
+    }
+    if (url.endsWith('/refunds/rfnd_TEST1')) return Response.json({ id: 'rfnd_TEST1', payment_id: 'pay_LATE',
+      amount: quote.totalPaise, currency: 'INR', status: 'processed' });
+    assert.match(url, /payments\/pay_TEST1$/);
+    return Response.json({ id: 'pay_TEST1', order_id: 'order_TEST1', amount: quote.totalPaise,
+      currency: 'INR', status: 'captured', captured: true });
+  });
+  const checkout = { ...request, checkoutId: 'pilot1', quoteKey: quote.quoteKey };
+  assert.equal((await call(customer, 'checkout', checkout)).razorpay.orderId, 'order_TEST1');
+  assert.equal((await call(customer, 'checkout', checkout)).razorpay.orderId, 'order_TEST1');
+  assert.equal(created, 1);
+  assert.equal(rows.get('variants/sku1').stock, 0);
+  const proof = { orderId: 'pilot1', razorpay_order_id: 'order_TEST1', razorpay_payment_id: 'pay_TEST1' };
+  assert.equal((await call(customer, 'confirmRazorpay', { ...proof, razorpay_signature: '0'.repeat(64) })).code, 400);
+  assert.equal(rows.get('orders/pilot1').paymentStatus, 'pending');
+  const signature = createHmac('sha256', config.RAZORPAY_KEY_SECRET).update('order_TEST1|pay_TEST1').digest('hex');
+  assert.equal((await call(customer, 'confirmRazorpay', { ...proof, razorpay_signature: signature })).status, 'paid');
+  assert.equal((await call(customer, 'confirmRazorpay', { ...proof, razorpay_signature: signature })).status, 'paid');
+  assert.equal(rows.get('orders/pilot1').history.filter(entry => entry.status === 'paid').length, 1);
+  assert.equal(rows.has('activeCheckouts/' + customer.uid), false);
+  assert.equal((await webhook.fetch(new Request('https://example.invalid', { method: 'POST', body: '{}',
+    headers: { 'x-razorpay-signature': '0'.repeat(64) } }))).status, 400);
+  rows.set('orders/late1', { ...rows.get('orders/pilot1'), gatewayOrderId: 'order_LATE',
+    gatewayPaymentId: null, status: 'cancelled', paymentStatus: 'expired' });
+  rows.set('gatewayOrders/order_LATE', { orderId: 'late1', mode: 'test' });
+  await recordCapturedPayment(db, { id: 'pay_LATE', order_id: 'order_LATE', amount: quote.totalPaise,
+    currency: 'INR', status: 'captured', captured: true }, 'test');
+  assert.equal(rows.get('orders/late1').paymentStatus, 'refund_review');
+  assert.equal(rows.get('orders/late1').status, 'cancelled');
+  const refund = { orderId: 'late1', refundId: 'rfnd_TEST1', note: 'Late test capture' };
+  assert.equal((await call(customer, 'recordGatewayRefund', refund)).code, 403);
+  assert.equal((await call(administrator, 'recordGatewayRefund', refund)).status, 'refund_recorded');
+  assert.equal(rows.get('orders/late1').paymentStatus, 'refunded');
+  assert.equal((await call(administrator, 'recordGatewayRefund', refund)).code, 409);
 });

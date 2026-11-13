@@ -5,6 +5,24 @@ import { api } from '@/lib/auth.js';
 import { inr } from '@/lib/format.js';
 import { useScrollLock } from '@/hooks/useSync.js';
 
+let checkoutScript;
+function loadRazorpay() {
+  if (window.Razorpay) return Promise.resolve(window.Razorpay);
+  if (!checkoutScript) {
+    checkoutScript = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => window.Razorpay ? resolve(window.Razorpay) : reject(new Error('Payment could not open'));
+      script.onerror = () => reject(new Error('Payment could not open'));
+      document.head.append(script);
+    }).catch(error => {
+      checkoutScript = undefined;
+      throw error;
+    });
+  }
+  return checkoutScript;
+}
+
 export default function PaymentModal({ open, checkout, onClose, onSuccess }) {
   const [qr, setQr] = useState(''), [reference, setReference] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
   useScrollLock(open);
@@ -14,21 +32,60 @@ export default function PaymentModal({ open, checkout, onClose, onSuccess }) {
     return () => { active = false; };
   }, [checkout]);
   if (!open || !checkout) return null;
-  const { order, upiUri } = checkout;
+  const { order, upiUri, razorpay } = checkout;
+  async function payWithRazorpay() {
+    setBusy(true);
+    setError('');
+    try {
+      const Razorpay = await loadRazorpay();
+      const payment = new Razorpay({
+        key: razorpay.key,
+        order_id: razorpay.orderId,
+        amount: order.totalPaise,
+        currency: order.currency,
+        name: 'Q Fashion',
+        modal: { ondismiss: () => setBusy(false) },
+        handler: async response => {
+          let status = 'pending';
+          try {
+            status = (await api('confirmRazorpay', { ...response, orderId: order.id })).status;
+          } catch {
+            // A captured payment can still be confirmed by the gateway notification.
+          } finally {
+            setBusy(false);
+            onSuccess(order, status);
+          }
+        },
+      });
+      payment.open();
+    } catch {
+      setError('Payment could not open. Try again or check My orders.');
+      setBusy(false);
+    }
+  }
   const submit = async event => {
     event.preventDefault(); setBusy(true); setError('');
     try { await api('submitPayment', { orderId: order.id, reference }); onSuccess(order); }
     catch (error) { setError(error.message); } finally { setBusy(false); }
   };
-  return <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/60" role="dialog" aria-modal="true" aria-label="Pay with UPI">
+  return <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/60" role="dialog" aria-modal="true" aria-label={razorpay ? 'Online payment' : 'Pay with UPI'}>
     <section className="payment-card bg-surface rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-auto">
       <header className="flex justify-between items-center"><p className="eyebrow">Q FASHION · ONLINE PAYMENT</p><button disabled={busy} onClick={onClose} aria-label="Close payment"><X size={20} /></button></header>
-      <h2 className="font-editorial text-3xl mt-4">Your edit, almost yours.</h2><p className="text-sm mt-3">Items · {inr((order.totalPaise - (order.deliveryFeePaise || 0)) / 100)}<br />Local delivery · {inr((order.deliveryFeePaise || 0) / 100)}</p><p className="text-2xl num mt-3">Total · {inr(order.totalPaise / 100)}</p><p className="text-sm text-muted mt-2">Pay the exact amount once. We’ll verify the credit before preparing your order.</p>
+      <h2 className="font-editorial text-3xl mt-4">Review and pay</h2><p className="text-sm mt-3">Items · {inr((order.itemsTotalPaise ?? (order.totalPaise - (order.deliveryFeePaise || 0))) / 100)}
+        {razorpay && <><br />Estimated apparel GST · {inr((order.apparelTaxPaise || 0) / 100)}<br />Platform fee · {inr((order.platformFeePaise || 0) / 100)}</>}
+        <br />Local delivery · {inr((order.deliveryFeePaise || 0) / 100)}</p><p className="text-2xl num mt-3">Total · {inr(order.totalPaise / 100)}</p>
+      {razorpay ? <div className="mt-4 space-y-3">
+        <button type="button" disabled={busy} onClick={payWithRazorpay} className="btn-primary w-full">{busy ? 'Opening payment…' : 'Pay with Razorpay'}</button>
+        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+        <p className="text-xs text-muted">If your bank shows a debit, check My orders before paying again.</p>
+      </div> : <>
+      <p className="text-sm text-muted mt-2">Pay the exact amount once. We’ll verify the credit before preparing your order.</p>
       {qr && <img src={qr} alt={'UPI payment QR for ' + order.payee} className="mx-auto my-4 w-52 h-52" />}
       <p className="text-center font-bold break-all">{order.payee}</p><a href={upiUri} className="btn-primary w-full my-3">Open UPI app</a>
       <p className="notice">Check the recipient in your UPI app. If the name is unexpected, stop and contact Q Fashion. Closing this sheet does not cancel a bank payment.</p>
       <form onSubmit={submit} className="mt-4 space-y-3"><label className="block text-sm">12-digit UPI transaction reference<input required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} value={reference} onChange={e => setReference(e.target.value)} className="field mt-2" autoComplete="off" /></label><p role="alert" className="text-sm text-danger">{error}</p><button disabled={busy} className="btn-outline w-full">{busy ? 'Submitting…' : 'Submit for payment verification'}</button></form>
       <p className="text-xs text-muted mt-3">Submitting a reference does not confirm payment. No cash on delivery. If you paid after the payment window closed, contact support before paying again.</p>
+      </>}
     </section>
   </div>;
 }

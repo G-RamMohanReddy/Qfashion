@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import products from '../data/bs-menz.json';
 import darkwolves from '../data/darkwolves.json';
 import { inr } from '../lib/format.js';
+import PilotCheckout from './PilotCheckout.jsx';
 
 const catalog = [...darkwolves, ...products];
 const categories = {
@@ -257,7 +258,7 @@ function readBasket() {
   }
 }
 
-function BasketDialog({ basket, onRemove, onClose }) {
+function BasketDialog({ basket, onRemove, onClose, user, onAccount, onPayment }) {
   const ref = useRef(null);
   const [step, setStep] = useState('bag');
   const [address, setAddress] = useState(null);
@@ -289,7 +290,9 @@ function BasketDialog({ basket, onRemove, onClose }) {
         <p className="text-sm">Choose a size on an item in the collection to add it to your bag.</p>
         <a href="#collection" className="btn-primary" onClick={onClose}>Browse the collection</a>
       </>)}
-      {step === 'delivery' && <form onSubmit={reviewDelivery} className="space-y-4">
+      {step === 'delivery' && import.meta.env.VITE_QF_PILOT_CHECKOUT === 'true' && <PilotCheckout
+        user={user} basket={basket} onAccount={onAccount} onPayment={onPayment} />}
+      {step === 'delivery' && import.meta.env.VITE_QF_PILOT_CHECKOUT !== 'true' && <form onSubmit={reviewDelivery} className="space-y-4">
         <label className="block text-sm font-medium">Flat or house number, building and street
           <input name="street" required pattern=".*\S.*" maxLength={160} autoComplete="address-line1" className="field mt-1" defaultValue={address?.street} />
         </label>
@@ -344,7 +347,7 @@ function ProductCards({ cards, onSelect }) {
     </div>;
 }
 
-export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBagCount }) {
+export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBagCount, user, onAccount, onPayment }) {
   const [type, setType] = useState('All');
   const [selected, setSelected] = useState(null);
   const [basket, setBasket] = useState(readBasket);
@@ -387,7 +390,9 @@ export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBag
         {combos.map(combo => <ComboCard key={combo.name} combo={combo} basket={basket} onAdd={addItems} />)}
       </div>
     </section>
-    {bagOpen && <BasketDialog basket={basket} onRemove={removeItem} onClose={onCloseBag} />}
+    {bagOpen && <BasketDialog basket={basket} onRemove={removeItem} onClose={onCloseBag}
+      user={user} onAccount={() => { onCloseBag(); onAccount(); }}
+      onPayment={checkout => { onCloseBag(); onPayment(checkout, () => setBasket([])); }} />}
     {selected && <ProductDialog key={selected.id} product={selected} basket={basket}
       onAdd={item => addItems([item])}
       onClose={() => setSelected(null)} />}

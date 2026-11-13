@@ -11,15 +11,13 @@ const labels = { awaiting_payment: 'Awaiting payment', awaiting_verification: 'A
 export default function Marketplace({ user, role, activeTab, onTabChange }) {
   const [localTab, setLocalTab] = useState('shop');
   const tab = activeTab || localTab, setTab = onTabChange || setLocalTab;
-  const [products, setProducts] = useState([]), [orders, setOrders] = useState([]);
-  const [bag, setBag] = useState({}), [checkout, setCheckout] = useState(null), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [checkout, setCheckout] = useState(null), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const [proofs, setProofs] = useState({});
-  const [addresses, setAddresses] = useState([]), [selectedAddress, setSelectedAddress] = useState(null);
   const load = useCallback(async () => {
-    if (!['shop', 'orders'].includes(tab)) return;
+    if (tab !== 'orders') return;
     try {
-      if (tab === 'shop') { const [result, profile] = await Promise.all([api('catalog'), api('profile')]); setProducts(result.variants); setAddresses(profile.profile.addresses || []); }
-      else setOrders((await api('orders')).orders);
+      setOrders((await api('orders')).orders);
     } catch (error) { setMessage(error.message); }
   }, [tab]);
   useEffect(() => { load(); }, [load]);
@@ -31,23 +29,11 @@ export default function Marketplace({ user, role, activeTab, onTabChange }) {
   }, [tab, load]);
   const run = async fn => { setBusy(true); setMessage(''); try { await fn(); } catch (error) { setMessage(error.message); } finally { setBusy(false); } };
   const send = (action, data) => run(async () => { await api(action, data); setMessage('Saved.'); await load(); });
-  const start = e => {
-    e.preventDefault(); const form = new FormData(e.currentTarget);
-    run(async () => {
-      const address = Object.fromEntries(['name', 'line', 'phone', 'pincode', 'lat', 'lng'].map(k => [k, form.get(k)]));
-      const lines = Object.entries(bag).filter(([, qty]) => qty > 0).map(([variantId, qty]) => ({ variantId, qty }));
-      const result = await api('checkout', { checkoutId: crypto.randomUUID(), lines, address });
-      setCheckout(result);
-    });
-  };
   const privileged = ['admin', 'vendor', 'rider'].includes(role);
   return <section className="account-shop mx-auto max-w-[1440px] px-5 py-8">
     <div className="flex flex-wrap gap-5 justify-between items-end mb-6"><div><p className="eyebrow">YOUR Q FASHION</p><h1 className="font-editorial text-4xl">Hello, {user.displayName?.split(' ')[0] || 'you'}.</h1><p className="text-muted mt-2">Find your next favourite, closer to home.</p></div><nav className="flex gap-2 flex-wrap" aria-label="Your account"><button className={tab === 'profile' ? 'chip chip-on' : 'chip'} onClick={() => setTab('profile')}>My profile</button><button className={tab === 'shop' ? 'chip chip-on' : 'chip'} onClick={() => setTab('shop')}>Shop</button><button className={tab === 'orders' ? 'chip chip-on' : 'chip'} onClick={() => setTab('orders')}>{privileged ? 'Fulfillment' : 'My orders'}</button>{['admin', 'vendor'].includes(role) && <button className={tab === 'catalog' ? 'chip chip-on' : 'chip'} onClick={() => setTab('catalog')}>Catalog studio</button>}{role === 'admin' && <button className={tab === 'analytics' ? 'chip chip-on' : 'chip'} onClick={() => setTab('analytics')}>Order analysis</button>}{role === 'admin' && <button className={tab === 'setup' ? 'chip chip-on' : 'chip'} onClick={() => setTab('setup')}>Store setup</button>}</nav></div>
-    <p role="status" className="notice mb-4">{message || 'Your private account · the collection is being prepared'}</p>
-    {tab === 'shop' && <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-      <div>{products.length === 0 ? <div className="card p-10"><p className="eyebrow">THE COLLECTION IS COMING</p><h2 className="font-editorial text-3xl mt-3">Good things take a little curation.</h2><p className="text-muted mt-3">Our real catalog has not been published yet. Explore the illustrated style edit above; ordering will open after launch checks are complete.</p></div> : <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">{products.map(p => <article key={p.id} className="card p-4">{p.image && <img src={p.image} alt={p.name} className="aspect-[3/4] object-cover w-full rounded mb-3" />}<h2 className="font-editorial text-xl">{p.name}</h2><p className="text-muted text-sm">{p.size} · {p.color}</p><p className="font-bold my-3">{inr(p.pricePaise / 100)}</p><label className="text-sm">Quantity<input type="number" aria-label={'Quantity for ' + p.name} min="0" max="10" value={bag[p.id] || 0} disabled={!p.available || busy} onChange={e => setBag(b => ({ ...b, [p.id]: Number(e.target.value) }))} className="field mt-2" /></label>{!p.available && <p>Currently unavailable</p>}</article>)}</div>}</div>
-      {products.length > 0 && <form onSubmit={start} className="card p-5 space-y-3 self-start"><h2 className="font-editorial text-2xl">Make room for something new.</h2><p className="text-sm text-muted">One vendor per checkout during the initial launch. Prices include tax and packaging. You pay the local delivery fee, shown separately before online payment.</p>{addresses.length > 0 && <label className="block text-sm">Saved delivery address<select className="field mt-1" value={selectedAddress?.id || ''} onChange={e => setSelectedAddress(addresses.find(address => address.id === e.target.value) || null)}><option value="">Enter a new address</option>{addresses.map(address => <option key={address.id} value={address.id}>{address.name} · {address.pincode}</option>)}</select></label>}{[['name', 'Recipient name'], ['phone', 'Mobile number'], ['line', 'Full delivery address'], ['pincode', 'Pincode'], ['lat', 'Delivery latitude'], ['lng', 'Delivery longitude']].map(([name, label]) => <label className="block text-sm" key={name + (selectedAddress?.id || 'new')}>{label}<input required name={name} defaultValue={selectedAddress?.[name] ?? (name === 'name' ? user.displayName || '' : '')} className="field mt-1" maxLength={name === 'line' ? 300 : 80} inputMode={['lat', 'lng'].includes(name) ? 'decimal' : ['phone', 'pincode'].includes(name) ? 'numeric' : 'text'} /></label>)}<a href="https://www.google.com/maps" target="_blank" rel="noreferrer" className="block text-sm underline">Find your delivery pin in Google Maps ↗</a><p className="text-xs text-muted">Coordinates are required until the address picker is configured. We check your pincode and route before showing payment.</p><button disabled={busy || !Object.values(bag).some(q => q > 0)} className="btn-primary w-full">{busy ? 'Checking your order…' : 'Review & pay with UPI →'}</button></form>}
-    </div>}
+    <p role="status" className="notice mb-4">{message || 'Your Q Fashion account'}</p>
+    {tab === 'shop' && <a className="btn-primary" href="#collection">Browse the collection</a>}
     {tab === 'orders' && <div className="space-y-4"><button className="btn-ghost" disabled={busy} onClick={load}>Refresh orders</button>{orders.length === 0 && <p>No orders to show.</p>}{orders.map(order => <article className="card p-5" key={order.id}><div className="flex flex-wrap justify-between gap-3"><div><p className="eyebrow">{order.vendorName}</p><h2 className="font-editorial text-2xl mt-1">{labels[order.status] || order.status}</h2><p className="text-xs text-muted mt-2 break-all">{order.id}</p></div><p className="font-bold">{inr(order.totalPaise / 100)}</p></div><p className="my-3">{order.items.map(i => `${i.name} · ${i.size} × ${i.qty}`).join(', ')}</p>
       <p className="text-sm">Delivery included in total · {inr((order.deliveryFeePaise || 0) / 100)}</p>
       <DeliveryEstimate order={order} />
@@ -66,14 +52,24 @@ export default function Marketplace({ user, role, activeTab, onTabChange }) {
       {role === 'admin' && ['paid', 'accepted', 'packed'].includes(order.status) && <form className="mt-4 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); const f = new FormData(e.currentTarget); send('assignRider', { orderId: order.id, name: f.get('name'), phone: f.get('phone') }); }}><label>Courier name<input required name="name" className="field" maxLength={80} /></label><label>Courier mobile<input required name="phone" pattern="[6-9][0-9]{9}" className="field" /></label><button disabled={busy} className="btn-outline self-end">Record courier called</button></form>}
       {['admin', 'rider'].includes(role) && order.status === 'dispatched' && <form className="mt-4 flex gap-2 flex-wrap" onSubmit={e => { e.preventDefault(); send('transition', { orderId: order.id, step: 'deliver', otp: new FormData(e.currentTarget).get('otp') }); }}><label>Customer delivery code<input required name="otp" inputMode="numeric" pattern="[0-9]{6}" className="field" /></label><button disabled={busy} className="btn-primary self-end">Confirm delivery</button></form>}
       {role === 'admin' && <details className="mt-4"><summary className="cursor-pointer font-bold">Complete order record</summary><pre className="text-xs overflow-auto max-h-80 mt-3 bg-canvas p-3 whitespace-pre-wrap break-all">{JSON.stringify(order, null, 2)}</pre></details>}
-      {role === 'admin' && order.paymentStatus === 'refund_review' && <form className="mt-4 space-y-3" onSubmit={e => { e.preventDefault(); const f = new FormData(e.currentTarget); send('recordRefund', { orderId: order.id, amountPaise: Math.round(Number(f.get('amount')) * 100), bankReference: f.get('reference'), note: f.get('note') }); }}><p className="font-bold">Record a refund already sent from your bank</p><label className="block">Refund amount (₹)<input required name="amount" type="number" step="0.01" min="1" className="field" /></label><label className="block">Refund UPI reference<input required name="reference" pattern="[0-9]{12}" className="field" /></label><label className="block">Review notes<input required name="note" maxLength={500} className="field" /></label><button disabled={busy} className="btn-outline">Record completed refund</button><p className="text-xs">This records your bank transfer; it does not send money.</p></form>}
+      {role === 'admin' && order.paymentStatus === 'refund_review' && order.paymentMethod === 'razorpay' && <form className="mt-4 space-y-3" onSubmit={e => {
+        e.preventDefault();
+        const form = new FormData(e.currentTarget);
+        send('recordGatewayRefund', { orderId: order.id, refundId: form.get('refundId'), note: form.get('note') });
+      }}>
+        <p className="font-bold">Verify a processed Razorpay refund</p>
+        <label className="block">Razorpay refund ID<input required name="refundId" pattern="rfnd_[A-Za-z0-9]+" className="field" /></label>
+        <label className="block">Reason<textarea required name="note" maxLength={500} className="field" /></label>
+        <button disabled={busy} className="btn-ghost">Verify refund</button>
+      </form>}
+      {role === 'admin' && order.paymentStatus === 'refund_review' && order.paymentMethod !== 'razorpay' && <form className="mt-4 space-y-3" onSubmit={e => { e.preventDefault(); const f = new FormData(e.currentTarget); send('recordRefund', { orderId: order.id, amountPaise: Math.round(Number(f.get('amount')) * 100), bankReference: f.get('reference'), note: f.get('note') }); }}><p className="font-bold">Record a refund already sent from your bank</p><label className="block">Refund amount (₹)<input required name="amount" type="number" step="0.01" min="1" className="field" /></label><label className="block">Refund UPI reference<input required name="reference" pattern="[0-9]{12}" className="field" /></label><label className="block">Review notes<input required name="note" maxLength={500} className="field" /></label><button disabled={busy} className="btn-outline">Record completed refund</button><p className="text-xs">This records your bank transfer; it does not send money.</p></form>}
       <ol className="text-xs text-muted mt-4 space-y-1">{order.history.map((event, i) => <li key={i}>{labels[event.status] || event.status} · {new Date(event.ts).toLocaleString()}</li>)}</ol>
     </article>)}</div>}
     {tab === 'profile' && <AccountSettings user={user} />}
     {tab === 'setup' && role === 'admin' && <AdminSetup />}
     {tab === 'analytics' && role === 'admin' && <OrderAnalytics />}
     {tab === 'catalog' && <CatalogStudio role={role} busy={busy} send={send} />}
-    <PaymentModal open={!!checkout} checkout={checkout} onClose={() => { setCheckout(null); setTab('orders'); }} onSuccess={() => { setCheckout(null); setBag({}); setTab('orders'); setMessage('Payment reference submitted. Your order is awaiting verification.'); load(); }} />
+    <PaymentModal open={!!checkout} checkout={checkout} onClose={() => { setCheckout(null); setTab('orders'); }} onSuccess={(_, status) => { setCheckout(null); setTab('orders'); setMessage(status === 'paid' ? 'Payment verified.' : 'Check My orders for the latest payment status.'); load(); }} />
   </section>;
 }
 
