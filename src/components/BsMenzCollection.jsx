@@ -258,9 +258,9 @@ function readBasket() {
   }
 }
 
-function BasketDialog({ basket, onRemove, onClose, user, onAccount, onPayment }) {
+function BasketDialog({ basket, onRemove, onClose, user, onAccount, onPayment, resumeCheckout }) {
   const ref = useRef(null);
-  const [step, setStep] = useState('bag');
+  const [step, setStep] = useState(resumeCheckout && basket.length ? 'delivery' : 'bag');
   const [address, setAddress] = useState(null);
   useEffect(() => {
     const previous = document.activeElement;
@@ -347,7 +347,7 @@ function ProductCards({ cards, onSelect }) {
     </div>;
 }
 
-export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBagCount, user, onAccount, onPayment }) {
+export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBagCount, user, onAccount, onPayment, resumeCheckout }) {
   const [type, setType] = useState('All');
   const [selected, setSelected] = useState(null);
   const [basket, setBasket] = useState(readBasket);
@@ -391,7 +391,7 @@ export default function BsMenzCollection({ bagOpen, onOpenBag, onCloseBag, onBag
       </div>
     </section>
     {bagOpen && <BasketDialog basket={basket} onRemove={removeItem} onClose={onCloseBag}
-      user={user} onAccount={() => { onCloseBag(); onAccount(); }}
+      user={user} onAccount={() => { onCloseBag(); onAccount(); }} resumeCheckout={resumeCheckout}
       onPayment={checkout => { onCloseBag(); onPayment(checkout, () => setBasket([])); }} />}
     {selected && <ProductDialog key={selected.id} product={selected} basket={basket}
       onAdd={item => addItems([item])}

@@ -8,6 +8,7 @@ export default function AccountGate() {
   const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(true), [browse, setBrowse] = useState(() => new URLSearchParams(window.location.search).get('account') !== '1');
   const [mode, setMode] = useState('login'), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  const [resumeCheckout, setResumeCheckout] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const authConnection = useRef(null);
@@ -75,7 +76,7 @@ export default function AccountGate() {
     return perform(() => sdk.signInWithPopup(auth, new sdk.GoogleAuthProvider()), false)
       .finally(() => setGoogleBusy(false));
   };
-  const logout = () => perform(async () => { const { auth, sdk } = await authClient(); await sdk.signOut(auth); setMode('login'); setMessage(''); setBrowse(true); });
+  const logout = () => perform(async () => { const { auth, sdk } = await authClient(); await sdk.signOut(auth); setMode('login'); setResumeCheckout(false); setMessage(''); setBrowse(true); });
   const submit = event => {
     event.preventDefault(); const data = new FormData(event.currentTarget);
     perform(async () => {
@@ -90,7 +91,7 @@ export default function AccountGate() {
   };
   if (loading && !browse) return <main className="auth-shell"><p role="status">Opening your wardrobe…</p></main>;
   if (user && !verified) return <main className="auth-shell"><section className="auth-story"><a href="/" className="wordmark">Q <span>FASHION</span></a><p className="eyebrow">ONE LAST STEP</p><h1>Your style.<br /><em>Your account.</em></h1><p>A secure start to your Q Fashion story.</p></section><section className="auth-card"><p className="eyebrow">Q FASHION ACCOUNT</p><h1>Check your inbox.</h1><p className="leading-7">Open the newest verification email sent to <strong className="break-all">{user.email}</strong> and tap its verification link. This page checks automatically when you return.</p><p className="notice mt-4">Link expired or invalid? Request a new email below. Also check your spam folder. Only open links you requested for this account.</p><p role="status" aria-live="polite" className="text-sm mt-4">{message}</p><button disabled={busy} className="btn-primary mt-4" onClick={() => perform(async () => { if (!await refreshVerification()) setMessage('Your email is still unverified. Open the newest Q Fashion email, or request a fresh link below.'); })}>{busy ? 'Checking…' : 'Check verification status'}</button><button disabled={busy || cooldown > 0} className="btn-ghost block mt-3" onClick={() => perform(async () => { const { auth, sdk } = await authClient(); await sdk.sendEmailVerification(auth.currentUser, emailContinueSettings()); setClock(Date.now()); setResendAt(Date.now() + 60000); setMessage('A fresh verification email was sent. Use the newest email from Q Fashion.'); })}>{cooldown ? 'Resend available in ' + cooldown + 's' : 'Send a fresh verification email'}</button><button className="btn-quiet mt-3" disabled={busy} onClick={logout}>Use another account / Sign out</button><a href="mailto:qfashion.shop1@gmail.com" className="text-link">Contact Q Fashion support ↗</a></section></main>;
-  if (user || browse) return <App key={user?.uid || 'guest'} user={user} role={role} onAccount={() => { setMode('login'); setMessage(''); setBrowse(false); window.scrollTo(0, 0); }} onLogout={logout} />;
+  if (user || browse) return <App key={user?.uid || 'guest'} user={user} role={role} resumeCheckout={Boolean(user && resumeCheckout)} onAccount={intent => { setResumeCheckout(intent === 'checkout'); setMode('login'); setMessage(''); setBrowse(false); window.scrollTo(0, 0); }} onLogout={logout} />;
   return <main className="auth-shell">
     <section className="auth-story"><a href="/" className="wordmark">Q <span>FASHION</span></a><p className="eyebrow">THE NEIGHBOURHOOD EDIT</p><h1>Your city.<br />Your style.<br /><em>Your moment.</em></h1><p>Discover a new way to dress, from the shops around you.</p><div className="auth-orbit" aria-hidden="true">Q</div><span className="auth-caption">A LITTLE LOCAL. A LOT YOU.</span></section>
     <section className="auth-card"><p className="eyebrow">YOUR NEXT CHAPTER</p><h2>{mode === 'signup' ? 'A beautiful beginning.' : mode === 'reset' ? 'Find your way back.' : 'Welcome to your edit.'}</h2><p className="text-muted mb-6">{mode === 'signup' ? 'Create your Q Fashion account.' : mode === 'reset' ? 'We’ll send a password reset link.' : 'Sign in. Find something that feels like you.'}</p>
