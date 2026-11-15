@@ -14,10 +14,12 @@ const questions = [
   ['How do I request a return or exchange?', 'Email qfashion.shop1@gmail.com with your order ID and item within 24 hours of delivery. Return the original garment you received, unwashed, with its tags attached and intact. We cannot accept substitutes. You pay the courier fee for a return or exchange. We will confirm the fee with you before arranging pickup. If you received a wrong or faulty item, contact us for help.'],
   ['Who is Q Fashion for?', 'Our collection welcomes shoppers of every age and gender.'],
 ];
-export default function App({ user, role, onAccount, onLogout }) {
-  const [panel, setPanel] = useState(null);
+export default function App({ user, role, onAccount, onLogout, resumeCheckout }) {
+  const [panel, setPanel] = useState(resumeCheckout ? 'bag' : null);
   const [accountTab, setAccountTab] = useState('profile');
-  const openAccount = (tab = 'profile') => { setAccountTab(tab); document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' }); };
+  const [accountOpen, setAccountOpen] = useState(false);
+  const openAccount = (tab = 'profile') => { setAccountTab(tab); setAccountOpen(true);
+    requestAnimationFrame(() => document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' })); };
   const accountAction = user ? () => openAccount() : onAccount;
   const openPanel = next => { if (user && next === 'orders') openAccount('orders'); else setPanel(next); };
   const [counts, setCounts] = useState({ saved: 0, bag: 0 });
@@ -27,9 +29,9 @@ export default function App({ user, role, onAccount, onLogout }) {
     <div className="launch-strip">GUWAHATI, WE’RE GETTING READY. <span>A new local fashion story.</span></div>
     <Header user={user} onAccount={accountAction} onLogout={onLogout} onPanel={openPanel} counts={{ ...counts, bag: bagCount }} />
     <main id="main-content">
-      {user && <div id="your-account"><Suspense fallback={<p className="page-section" role="status">Opening your account…</p>}><Marketplace user={user} role={role} activeTab={accountTab} onTabChange={setAccountTab} /></Suspense></div>}
+      {user && <div id="your-account" hidden={!accountOpen}><Suspense fallback={<p className="page-section" role="status">Opening your account…</p>}><Marketplace user={user} role={role} activeTab={accountTab} onTabChange={setAccountTab} /></Suspense></div>}
       <section className="launch-hero" aria-labelledby="hero-title">
-        <div className="launch-copy"><p className="eyebrow">Q FASHION / THE NEIGHBOURHOOD EDIT</p><h1 id="hero-title">Good style.<br />Closer to <em>home.</em></h1><p>A fresh perspective on the shops around you.<br />Made for your everyday. Inspired by Guwahati.</p><div className="hero-actions"><a href="#collection" className="btn-primary">Explore the collection ↗</a><button className="btn-quiet" onClick={user ? () => document.getElementById('your-account')?.scrollIntoView({ behavior: 'smooth' }) : onAccount}>{user ? 'Open my account' : isFirebaseConfigured ? 'Join Q Fashion' : 'Account preview'} →</button></div><div className="launch-note"><span className="launch-dot" /> Ordering coming soon</div></div>
+        <div className="launch-copy"><p className="eyebrow">Q FASHION / THE NEIGHBOURHOOD EDIT</p><h1 id="hero-title">Good style.<br />Closer to <em>home.</em></h1><p>A fresh perspective on the shops around you.<br />Made for your everyday. Inspired by Guwahati.</p><div className="hero-actions"><a href="#collection" className="btn-primary">Explore the collection ↗</a><button className="btn-quiet" onClick={accountAction}>{user ? 'Open my account' : isFirebaseConfigured ? 'Join Q Fashion' : 'Account preview'} →</button></div><div className="launch-note"><span className="launch-dot" /> Ordering coming soon</div></div>
         <figure className="launch-art">
           <img src="/qfashion-streetwear-hero.jpg" alt="A man and a woman wearing oversized tees, sportswear and caps" fetchPriority="high" />
           <figcaption>AI-generated styling inspiration</figcaption>
