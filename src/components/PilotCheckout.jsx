@@ -1,10 +1,14 @@
 import { useRef, useState } from 'react';
 import { api } from '@/lib/auth.js';
 import { inr } from '@/lib/format.js';
+import DeliveryMap from './DeliveryMap.jsx';
+
+const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY;
 
 export default function PilotCheckout({ user, basket, onAccount, onPayment }) {
   const [address, setAddress] = useState({ name: user?.displayName || '', phone: '', line: '', pincode: '' });
   const [pin, setPin] = useState(null);
+  const [mapOpen, setMapOpen] = useState(false);
   const [candidates, setCandidates] = useState([]);
   const [quote, setQuote] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -79,7 +83,14 @@ export default function PilotCheckout({ user, basket, onAccount, onPayment }) {
       <div className="flex flex-wrap gap-2">
         <button type="button" disabled={!addressReady} className="btn-quiet" onClick={findAddress}>Find my address</button>
         <button type="button" className="btn-quiet" onClick={locate}>Use current location</button>
+        {mapsKey && <button type="button" className="btn-quiet" aria-expanded={mapOpen} onClick={() => setMapOpen(open => !open)}>{mapOpen ? 'Close map' : 'Choose a pin on the map'}</button>}
       </div>
+      {mapOpen && mapsKey && <DeliveryMap apiKey={mapsKey} initialPin={pin} onConfirm={point => {
+        setPin(point);
+        setQuote(null);
+        setCandidates([]);
+        setMapOpen(false);
+      }} />}
       {candidates.map(candidate => <button type="button" key={candidate.label} className="btn-quiet block" onClick={() => {
         setPin(candidate);
         setCandidates([]);
