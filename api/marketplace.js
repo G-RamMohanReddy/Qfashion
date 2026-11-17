@@ -167,7 +167,8 @@ return async function handler(req, res) {
       const vendorIds = [...new Set(items.map(i => i.vendorId))];
       requireValue(vendorIds.length === 1, 'Please check out one vendor at a time');
       const vendor = (await db.doc(`vendors/${id(vendorIds[0])}`).get()).data();
-      requireValue(vendor?.active === true && vendor.pincodes?.includes(address.pincode), 'This shop does not deliver to that PIN code');
+      requireValue(vendor?.active === true, 'This shop is currently unavailable', 409);
+      requireValue(vendor.deliveryByDistanceOnly === true || vendor.pincodes?.includes(address.pincode), 'This shop does not deliver to that PIN code');
       requireValue(withinDeliveryArea(vendor.pickup, address, vendor.radiusKm), 'Delivery pin is outside the vendor’s local delivery area');
       const timings = await estimateRoute(vendor, address);
       if (gateway) requireValue(items.every(item => ['Oversized tees', 'Boxy tees', 'Vests', 'Sweatshirts', 'Hoodies'].includes(item.productType)),
@@ -297,9 +298,11 @@ return async function handler(req, res) {
     if (action === 'saveVendor') {
       admin(actor); const v = input.vendor;
       requireValue(v && Array.isArray(v.pincodes) && v.pincodes.length <= 50 && v.pincodes.every(p => /^[1-9][0-9]{5}$/.test(p)), 'Invalid service pincodes');
+      const deliveryByDistanceOnly = v.deliveryByDistanceOnly === true;
+      requireValue(!deliveryByDistanceOnly || v.pincodes.length === 0, 'Clear the PIN code list to use distance-only coverage');
       const pickup = validateAddress(v.pickup);
       const timings = { prep: integer(v.prep, 0, 120), packaging: integer(v.packaging, 0, 120), riderArrival: integer(v.riderArrival, 0, 120), buffer: integer(v.buffer, 0, 120) };
-      await db.doc(`vendors/${id(v.id)}`).set({ name: text(v.name, 100), active: v.active === true, pincodes: v.pincodes, radiusKm: integer(v.radiusKm, 1, 50), pickup, deliveryFeePaise: integer(v.deliveryFeePaise, 1, 10000000), ...timings, updatedAt: now() });
+      await db.doc(`vendors/${id(v.id)}`).set({ name: text(v.name, 100), active: v.active === true, pincodes: v.pincodes, deliveryByDistanceOnly, radiusKm: integer(v.radiusKm, 1, 50), pickup, deliveryFeePaise: integer(v.deliveryFeePaise, 1, 10000000), ...timings, updatedAt: now() });
       return res.json({ status: 'saved' });
     }
     if (action === 'recordGatewayRefund') {
