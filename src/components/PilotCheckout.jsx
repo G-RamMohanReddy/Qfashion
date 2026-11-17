@@ -15,7 +15,6 @@ export default function PilotCheckout({ user, basket, onAccount, onPayment }) {
   const [message, setMessage] = useState('');
   const checkoutId = useRef(null);
   const lines = basket.map(({ sku }) => ({ variantId: sku, qty: 1 }));
-  const mixed = new Set(basket.map(item => item.sku.startsWith('DW-') ? 'dw' : 'bs')).size > 1;
   const addressReady = address.line.trim().length > 0 && /^[1-9][0-9]{5}$/.test(address.pincode);
 
   function update(field, value) {
@@ -64,7 +63,6 @@ export default function PilotCheckout({ user, basket, onAccount, onPayment }) {
   const payload = () => ({ lines, address: { ...address, lat: pin.lat, lng: pin.lng } });
 
   if (!user) return <button type="button" className="btn-primary" onClick={onAccount}>Sign in to check delivery</button>;
-  if (mixed) return <p role="status">For this pilot, check out items from one shop at a time. Remove one shop’s items to continue.</p>;
   return <form onSubmit={event => {
     event.preventDefault();
     if (!pin) return;
@@ -99,6 +97,7 @@ export default function PilotCheckout({ user, basket, onAccount, onPayment }) {
       {pin && <p>Delivery pin: <a className="underline" target="_blank" rel="noreferrer" href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(pin.lat + ',' + pin.lng)}>{pin.label}</a></p>}
       <button type="submit" className="btn-primary" disabled={!pin}>Check delivery and price</button>
       {quote && <section className="space-y-2 border-t border-line pt-3" aria-label="Delivery quote">
+        {quote.shopNames?.length > 1 && <p>One payment and delivery from {quote.shopNames.join(' and ')}.</p>}
         <p>Estimated delivery: {quote.eta.total} min after payment</p>
         <p className="text-sm text-muted">Prep {quote.eta.components.prep} + packing {quote.eta.components.packaging} + courier arrival {quote.eta.components.riderArrival} + travel {quote.eta.components.travelDelivery} + buffer {quote.eta.components.buffer} min</p>
         <dl className="space-y-1">
