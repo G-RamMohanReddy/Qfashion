@@ -6,12 +6,13 @@ import AboutUs from './components/AboutUs.jsx';
 import { isFirebaseConfigured } from '@/lib/firebase.js';
 const PaymentModal = lazy(() => import('./components/PaymentModal.jsx'));
 const Marketplace = lazy(() => import('./components/Marketplace.jsx'));
+const checkoutPilot = import.meta.env.VITE_QF_PILOT_CHECKOUT === 'true';
 const questions = [
-  ['Can I order now?', 'Browse the collection and check the available sizes for each item. Ordering opens after final prices and delivery coverage are confirmed.'],
-  ['Where will Q Fashion deliver?', 'We are preparing a local launch in Guwahati. Eligible neighbourhoods, delivery charges and operating hours will be published before ordering opens.'],
+  ['Can I order now?', checkoutPilot ? 'You can test checkout with items that are in stock in staging. Use a test payment at the final step.' : 'Browse the collection and check the available sizes for each item. Ordering opens after final prices and delivery coverage are confirmed.'],
+  ['Where will Q Fashion deliver?', checkoutPilot ? 'Enter your delivery address at checkout to check whether each shop in your bag can deliver there.' : 'We are preparing a local launch in Guwahati. Eligible neighbourhoods, delivery charges and operating hours will be published before ordering opens.'],
   ['How will delivery work?', 'Q Fashion will arrange a local courier to collect and deliver your order. Your account will show confirmed order stages and an estimated arrival window, without a live rider map.'],
   ['How is the delivery estimate calculated?', 'The estimate includes preparation, packaging, the courier’s arrival at the shop, travel to you, and a buffer. Traffic and shop readiness can change the estimate; the timer does not confirm delivery.'],
-  ['How will payments work?', 'Checkout is online only. You pay for the items and local delivery together. The delivery fee is shown separately before payment. For the planned initial UPI flow, a submitted reference stays pending until Q Fashion confirms the actual bank credit. Never share your UPI PIN or bank OTP.'],
+  ['How will payments work?', checkoutPilot ? 'Staging uses Razorpay test payments. Items from eligible shops appear in one total before payment.' : 'Checkout is online only. You pay for the items and local delivery together. The delivery fee is shown separately before payment. For the planned initial UPI flow, a submitted reference stays pending until Q Fashion confirms the actual bank credit. Never share your UPI PIN or bank OTP.'],
   ['How do I request a return or exchange?', 'Email qfashion.shop1@gmail.com with your order ID and item within 24 hours of delivery. Return the original garment you received, unwashed, with its tags attached and intact. We cannot accept substitutes. You pay the courier fee for a return or exchange. We will confirm the fee with you before arranging pickup. If you received a wrong or faulty item, contact us for help.'],
   ['Who is Q Fashion for?', 'Our collection welcomes shoppers of every age and gender.'],
 ];
@@ -29,12 +30,12 @@ export default function App({ user, role, onAccount, onLogout, resumeCheckout })
   const [bagCount, setBagCount] = useState(0);
   return <div className="min-h-screen bg-canvas new-edit">
     <a className="skip-link" href="#main-content">Skip to content</a>
-    <div className="launch-strip">GUWAHATI, WE’RE GETTING READY. <span>A new local fashion story.</span></div>
+    <div className="launch-strip">{checkoutPilot ? 'Q FASHION STAGING' : 'GUWAHATI, WE’RE GETTING READY.'} <span>{checkoutPilot ? 'Test payments only' : 'A new local fashion story.'}</span></div>
     <Header user={user} onAccount={accountAction} onLogout={onLogout} onPanel={openPanel} counts={{ ...counts, bag: bagCount }} />
     <main id="main-content">
       {user && <div id="your-account" hidden={!accountOpen}><Suspense fallback={<p className="page-section" role="status">Opening your account…</p>}><Marketplace user={user} role={role} activeTab={accountTab} onTabChange={setAccountTab} /></Suspense></div>}
       <section className="launch-hero" aria-labelledby="hero-title">
-        <div className="launch-copy"><p className="eyebrow">Q FASHION / THE NEIGHBOURHOOD EDIT</p><h1 id="hero-title">Good style.<br />Closer to <em>home.</em></h1><p>A fresh perspective on the shops around you.<br />Made for your everyday. Inspired by Guwahati.</p><div className="hero-actions"><a href="#collection" className="btn-primary">Explore the collection ↗</a><button className="btn-quiet" onClick={accountAction}>{user ? 'Open my account' : isFirebaseConfigured ? 'Join Q Fashion' : 'Account preview'} →</button></div><div className="launch-note"><span className="launch-dot" /> Ordering coming soon</div></div>
+        <div className="launch-copy"><p className="eyebrow">Q FASHION / THE NEIGHBOURHOOD EDIT</p><h1 id="hero-title">Good style.<br />Closer to <em>home.</em></h1><p>A fresh perspective on the shops around you.<br />Made for your everyday. Inspired by Guwahati.</p><div className="hero-actions"><a href="#collection" className="btn-primary">Explore the collection ↗</a><button className="btn-quiet" onClick={accountAction}>{user ? 'Open my account' : isFirebaseConfigured ? 'Join Q Fashion' : 'Account preview'} →</button></div><div className="launch-note"><span className="launch-dot" /> {checkoutPilot ? 'Test checkout for eligible items' : 'Ordering coming soon'}</div></div>
         <figure className="launch-art">
           <img src="/qfashion-streetwear-hero.jpg" alt="A man and a woman wearing oversized tees, sportswear and caps" fetchPriority="high" />
           <figcaption>AI-generated styling inspiration</figcaption>
@@ -59,15 +60,15 @@ export default function App({ user, role, onAccount, onLogout, resumeCheckout })
 
       <section id="questions" className="page-section faq-section"><div><p className="eyebrow">BEFORE WE BEGIN</p><h2>A little more<br /><em>about Q.</em></h2><p>Something else on your mind?</p><a href="mailto:qfashion.shop1@gmail.com" className="btn-ghost mt-4">Talk to us ↗</a></div><div>{questions.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div></section>
       <section id="ordering-guide" className="page-section" aria-labelledby="ordering-guide-title">
-        <div className="section-heading"><div><p className="eyebrow">SHOPPING WITH Q FASHION</p><h2 id="ordering-guide-title">How to <em>order.</em></h2></div><p>Browse and build an estimate now. Online orders open after delivery and payment setup is complete.</p></div>
+        <div className="section-heading"><div><p className="eyebrow">SHOPPING WITH Q FASHION</p><h2 id="ordering-guide-title">How to <em>order.</em></h2></div><p>{checkoutPilot ? 'Add an in-stock test item to your bag, confirm delivery, and review your total.' : 'Browse and build an estimate now. Online orders open after delivery and payment setup is complete.'}</p></div>
         <ol className="grid gap-4 md:grid-cols-3">
           <li className="card p-5"><h3 className="font-bold">Choose your size</h3><p className="text-sm mt-2">Open a product and swipe through its photos. Select an available size and add it to your basket estimate.</p></li>
           <li className="card p-5"><h3 className="font-bold">Check the total</h3><p className="text-sm mt-2">The estimate shows item prices, GST and platform fees. Delivery is ₹100 for one item and free for two or more.</p></li>
-          <li className="card p-5"><h3 className="font-bold">Confirm delivery before paying</h3><p className="text-sm mt-2">Open your bag to preview the delivery address step. You’ll review your final total before paying online when orders open.</p></li>
+          <li className="card p-5"><h3 className="font-bold">Confirm delivery before paying</h3><p className="text-sm mt-2">{checkoutPilot ? 'Enter your address and confirm the pin to check the delivery estimate. Eligible items from different shops share one checkout.' : 'Open your bag to preview the delivery address step. You’ll review your final total before paying online when orders open.'}</p></li>
         </ol>
         <a href="#collection" className="btn-primary mt-6">Back to the collection</a>
       </section>
     </main>
-    <AboutUs />
+    <AboutUs checkoutPilot={checkoutPilot} />
   </div>;
 }
