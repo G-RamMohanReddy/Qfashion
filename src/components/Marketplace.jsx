@@ -40,7 +40,7 @@ export default function Marketplace({ user, role, activeTab, onTabChange }) {
       {order.shopOrders && <section className="my-3 space-y-2" aria-label="Shops in this order">
         <p className="font-bold">{role === 'admin' ? 'Courier pickup order' : 'Shops in this delivery'}</p>
         {order.shopOrders.map((shop, index) => <div key={shop.vendorId} className="text-sm">
-          <p>{shop.name} · {shopLabels[shop.status]}</p>
+          <p>{shop.name} · {['paid', 'accepted', 'packed'].includes(order.status) ? shopLabels[shop.status] : labels[order.status]}</p>
           {role === 'admin' && order.vendorSnapshots?.[index]?.pickup && <p className="text-muted">
             {order.vendorSnapshots[index].pickup.line} · {order.vendorSnapshots[index].pickup.pincode} · {order.vendorSnapshots[index].pickup.phone}
           </p>}
