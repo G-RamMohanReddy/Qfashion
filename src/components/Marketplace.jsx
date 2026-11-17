@@ -8,6 +8,7 @@ import AccountSettings from './AccountSettings.jsx';
 import AdminSetup from './AdminSetup.jsx';
 
 const labels = { awaiting_payment: 'Awaiting payment', awaiting_verification: 'Awaiting payment verification', paid: 'Payment verified', accepted: 'Preparing your order', packed: 'Packed for pickup', dispatched: 'Out for delivery', delivered: 'Delivered', cancelled: 'Cancelled' };
+const shopLabels = { pending: 'Awaiting shop acceptance', accepted: 'Preparing items', packed: 'Ready for pickup' };
 export default function Marketplace({ user, role, activeTab, onTabChange }) {
   const [localTab, setLocalTab] = useState('shop');
   const tab = activeTab || localTab, setTab = onTabChange || setLocalTab;
@@ -35,7 +36,16 @@ export default function Marketplace({ user, role, activeTab, onTabChange }) {
     <p role="status" className="notice mb-4">{message || 'Your Q Fashion account'}</p>
     {tab === 'shop' && <a className="btn-primary" href="#collection">Browse the collection</a>}
     {tab === 'orders' && <div className="space-y-4"><button className="btn-ghost" disabled={busy} onClick={load}>Refresh orders</button>{orders.length === 0 && <p>No orders to show.</p>}{orders.map(order => <article className="card p-5" key={order.id}><div className="flex flex-wrap justify-between gap-3"><div><p className="eyebrow">{order.vendorName}</p><h2 className="font-editorial text-2xl mt-1">{labels[order.status] || order.status}</h2><p className="text-xs text-muted mt-2 break-all">{order.id}</p></div><p className="font-bold">{inr(order.totalPaise / 100)}</p></div><p className="my-3">{order.items.map(i => `${i.name} · ${i.size} × ${i.qty}`).join(', ')}</p>
-      <p className="text-sm">Delivery included in total · {inr((order.deliveryFeePaise || 0) / 100)}</p>
+      <p className="text-sm">{order.vendorSubtotal ? 'Your shop’s item subtotal' : `Delivery included in total · ${inr((order.deliveryFeePaise || 0) / 100)}`}</p>
+      {order.shopOrders && <section className="my-3 space-y-2" aria-label="Shops in this order">
+        <p className="font-bold">{role === 'admin' ? 'Courier pickup order' : 'Shops in this delivery'}</p>
+        {order.shopOrders.map((shop, index) => <div key={shop.vendorId} className="text-sm">
+          <p>{shop.name} · {shopLabels[shop.status]}</p>
+          {role === 'admin' && order.vendorSnapshots?.[index]?.pickup && <p className="text-muted">
+            {order.vendorSnapshots[index].pickup.line} · {order.vendorSnapshots[index].pickup.pincode} · {order.vendorSnapshots[index].pickup.phone}
+          </p>}
+        </div>)}
+      </section>}
       <DeliveryEstimate order={order} />
       {order.uid === user.uid && order.status === 'delivered' && <p className="my-3 text-sm">For a return or exchange, contact us within 24 hours of delivery. Keep the original garment unwashed with tags intact. You pay the courier fee, which we confirm before pickup. <a className="underline" href={'mailto:qfashion.shop1@gmail.com?subject=' + encodeURIComponent('Return or exchange · ' + order.id)}>Email Q Fashion about this order ↗</a></p>}
       {order.paymentStatus === 'awaiting_verification' && <p className="mt-3 text-sm">Payment reference submitted. Q Fashion must confirm the bank credit before fulfillment.</p>}
