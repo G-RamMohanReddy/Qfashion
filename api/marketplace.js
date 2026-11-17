@@ -1,5 +1,5 @@
 import { randomInt, createHash, timingSafeEqual } from 'node:crypto';
-import { AggregateField, FieldPath } from 'firebase-admin/firestore';
+import { AggregateField, FieldPath, Filter } from 'firebase-admin/firestore';
 import { services, authenticate, routeAuthentication } from '../server/admin.js';
 import { releaseExpiredReservations } from '../server/reservations.js';
 import { prepareRazorpay, razorpayConfig, verifyRazorpay, verifyRazorpayRefund } from '../server/razorpay.js';
@@ -104,26 +104,31 @@ return async function handler(req, res) {
     }
     if (action === 'orders') {
       let query = db.collection('orders');
-      if (actor.role === 'vendor') query = query.where('vendorId', '==', actor.vendorId || '__none__');
+      if (actor.role === 'vendor') {
+        const vendorId = actor.vendorId || '__none__';
+        query = query.where(Filter.or(Filter.where('vendorId', '==', vendorId), Filter.where('vendorIds', 'array-contains', vendorId)));
+      }
       else if (actor.role === 'rider') query = query.where('riderId', '==', actor.uid);
       else if (actor.role !== 'admin') query = query.where('uid', '==', actor.uid);
       const snap = await query.limit(100).get();
       return res.json({ orders: snap.docs.map(d => {
         const order = { id: d.id, ...d.data() };
-        if (actor.role !== 'admin') { delete order.vendorSnapshot; delete order.courier; delete order.verifiedBy; }
+        if (actor.role === 'vendor' && order.shopOrders) return vendorOrderView(order, actor.vendorId);
+        if (actor.role !== 'admin') { delete order.vendorSnapshot; delete order.vendorSnapshots; delete order.courier; delete order.verifiedBy; }
+        if (actor.role !== 'admin' && order.shopOrders) order.history = order.history.filter(event => !event.status.startsWith('shop_'));
         if (actor.role !== 'admin' && order.uid !== actor.uid) {
           delete order.submittedReference; delete order.payee; delete order.customer;
           if (actor.role === 'vendor') delete order.address;
         }
         return order;
-      }).sort((a, b) => b.createdAt - a.createdAt) });
+      }).filter(Boolean).sort((a, b) => b.createdAt - a.createdAt) });
     }
     if (action === 'resumePayment') {
       const ref = db.doc(`orders/${id(input.orderId)}`), order = (await ref.get()).data();
       requireValue(order?.uid === actor.uid, 'Order not found', 404);
       requireValue(order.status === 'awaiting_payment' && order.expiresAt > now(), 'Payment window closed; do not pay again', 409);
       if (order.paymentMethod === 'razorpay') {
-        return res.json(await prepareRazorpay(db, { id: ref.id, ...order }, razorpayConfig()));
+        return res.json(await prepareRazorpay(db, checkoutOrderView({ id: ref.id, ...order }), razorpayConfig()));
       }
       manualEnabled();
       return res.json({ order: { id: ref.id, ...order }, upiUri: upiLink({ amountPaise: order.totalPaise, reference: ref.id }) });
@@ -154,7 +159,7 @@ return async function handler(req, res) {
         const existing = (await db.doc(`orders/${checkoutId}`).get()).data();
         if (existing) {
           requireValue(existing.uid === actor.uid && existing.paymentMethod === 'razorpay', 'Checkout conflict', 409);
-          return res.json(await prepareRazorpay(db, { id: checkoutId, ...existing }, gateway));
+          return res.json(await prepareRazorpay(db, checkoutOrderView({ id: checkoutId, ...existing }), gateway));
         }
       }
       const address = validateAddress(input.address);
@@ -163,19 +168,20 @@ return async function handler(req, res) {
       const refs = lines.map(l => db.doc(`variants/${id(l.variantId)}`));
       const snaps = await db.getAll(...refs);
       const items = quoteLines(lines, snaps.map(s => s.data()));
-      // Mixed-vendor payment collection remains disabled until payout policy is agreed.
-      const vendorIds = [...new Set(items.map(i => i.vendorId))];
-      requireValue(vendorIds.length === 1, 'Please check out one vendor at a time');
-      const vendor = (await db.doc(`vendors/${id(vendorIds[0])}`).get()).data();
-      requireValue(vendor?.active === true, 'This shop is currently unavailable', 409);
-      requireValue(vendor.deliveryByDistanceOnly === true || vendor.pincodes?.includes(address.pincode), 'This shop does not deliver to that PIN code');
-      requireValue(withinDeliveryArea(vendor.pickup, address, vendor.radiusKm), 'Delivery pin is outside the vendor’s local delivery area');
-      const timings = await estimateRoute(vendor, address);
+      const vendorIds = [...new Set(items.map(item => item.vendorId))].sort();
+      const mixed = vendorIds.length > 1;
+      requireValue(!mixed || gateway, 'Multi-shop orders require online checkout', 409);
+      requireValue(vendorIds.length <= 26, 'This bag has too many pickup stops for one delivery');
+      const vendorRefs = vendorIds.map(vendorId => db.doc(`vendors/${id(vendorId)}`));
+      const vendors = (await db.getAll(...vendorRefs)).map(snap => snap.data());
+      for (const vendor of vendors) validateDeliveryCoverage(vendor, address);
       if (gateway) requireValue(items.every(item => ['Oversized tees', 'Boxy tees', 'Vests', 'Sweatshirts', 'Hoodies'].includes(item.productType)),
         'A product is missing its verified price category. Contact Q Fashion.', 409);
-      const pricing = orderPricing(items, vendor, Boolean(gateway));
-      const quoteKey = hash(JSON.stringify({ uid: actor.uid, address, items, vendor, pricing }));
-      if (action === 'deliveryQuote') return res.json({ ...pricing, eta: timings, quoteKey });
+      const timings = await estimateOrderRoute(vendors, address, estimateRoute);
+      const pricing = orderPricing(items, vendors[0], Boolean(gateway));
+      const shopNames = vendors.map(vendor => text(vendor.name, 100));
+      const quoteKey = hash(JSON.stringify({ uid: actor.uid, address, items, vendors, pricing }));
+      if (action === 'deliveryQuote') return res.json({ ...pricing, eta: timings, quoteKey, shopNames });
       if (gateway) requireValue(input.quoteKey === quoteKey, 'Your price or delivery details changed. Review delivery again.', 409);
       const result = await db.runTransaction(async tx => {
         const orderRef = db.doc(`orders/${checkoutId}`), existing = await tx.get(orderRef);
@@ -186,12 +192,17 @@ return async function handler(req, res) {
         const activeRef = db.doc(`activeCheckouts/${actor.uid}`), active = (await tx.get(activeRef)).data();
         requireValue(!active?.orderId, 'You have an open order. Resume or cancel it in My orders', 409);
         // Re-read all authoritative prices, stock and vendor config in transaction.
-        const currentVendor = await tx.get(db.doc(`vendors/${vendorIds[0]}`));
-        requireValue(JSON.stringify(currentVendor.data()) === JSON.stringify(vendor), 'Delivery settings changed. Try again', 409);
+        const currentVendors = (await tx.getAll(...vendorRefs)).map(snap => snap.data());
+        requireValue(JSON.stringify(currentVendors) === JSON.stringify(vendors), 'Delivery settings changed. Try again', 409);
         const fresh = await tx.getAll(...refs), current = quoteLines(lines, fresh.map(s => s.data()));
         requireValue(JSON.stringify(current) === JSON.stringify(items), 'Prices changed. Review your bag', 409);
 
-        const order = { uid: actor.uid, customer: { uid: actor.uid, email: actor.email || null, name: address.name, phone: address.phone }, vendorId: vendorIds[0], vendorName: text(vendor.name, 100), vendorSnapshot: vendor, items: current, address,
+        const shopData = mixed ? {
+          vendorIds, vendorName: shopNames.join(' + '), vendorSnapshots: vendors,
+          shopOrders: vendorIds.map((vendorId, index) => ({ vendorId, name: shopNames[index], status: 'pending',
+            itemsTotalPaise: current.filter(item => item.vendorId === vendorId).reduce((sum, item) => sum + item.lineTotalPaise, 0) })),
+        } : { vendorId: vendorIds[0], vendorName: shopNames[0], vendorSnapshot: vendors[0] };
+        const order = { uid: actor.uid, customer: { uid: actor.uid, email: actor.email || null, name: address.name, phone: address.phone }, ...shopData, items: current, address,
           ...pricing, currency: 'INR', payee: gateway ? null : UPI_ID, paymentMethod: gateway ? 'razorpay' : 'manual_upi',
           priceIncludesTax: !gateway, packagingFeePaise: 0, status: 'awaiting_payment', paymentStatus: 'pending',
           riderId: null, eta: timings, createdAt: now(), updatedAt: now(), expiresAt: now() + 30 * 60000,
@@ -204,7 +215,7 @@ return async function handler(req, res) {
       requireValue(result.status === 'awaiting_payment' && result.expiresAt > now(), 'Checkout is no longer payable', 409);
       if (gateway) {
         requireValue(result.paymentMethod === 'razorpay', 'Checkout conflict', 409);
-        return res.json(await prepareRazorpay(db, result, gateway));
+        return res.json(await prepareRazorpay(db, checkoutOrderView(result), gateway));
       }
       return res.json({ order: result, upiUri: upiLink({ amountPaise: result.totalPaise, reference: checkoutId }) });
     }
@@ -265,6 +276,10 @@ return async function handler(req, res) {
         failedProof = false;
         const ref = db.doc(`orders/${id(input.orderId)}`), order = (await tx.get(ref)).data();
         requireValue(order, 'Order not found', 404);
+        if (order.shopOrders && ['accept', 'pack'].includes(input.step)) {
+          tx.update(ref, advanceShopOrders(order, input.step, actor));
+          return;
+        }
         const status = canTransition(order, input.step, actor);
         if (input.step === 'deliver') {
           const secretRef = db.doc(`deliverySecrets/${ref.id}`), secret = (await tx.get(secretRef)).data();
@@ -360,6 +375,60 @@ return async function handler(req, res) {
 }
 export default createHandler();
 
+function checkoutOrderView({ vendorSnapshot, vendorSnapshots, ...order }) {
+  return order;
+}
+
+function vendorOrderView(order, vendorId) {
+  const shop = order.shopOrders.find(item => item.vendorId === vendorId);
+  if (!shop) return null;
+  const inPreparation = ['paid', 'accepted', 'packed'].includes(order.status);
+  const status = inPreparation ? (shop.status === 'pending' ? 'paid' : shop.status) : order.status;
+  return { id: order.id, vendorId, vendorName: shop.name, vendorSubtotal: true,
+    items: order.items.filter(item => item.vendorId === vendorId), totalPaise: shop.itemsTotalPaise,
+    status, paymentStatus: order.paymentStatus, createdAt: order.createdAt,
+    history: order.history.filter(event => !event.status.startsWith('shop_') || event.vendorId === vendorId)
+      .map(({ status, ts }) => ({ status: status.replace(/^shop_/, ''), ts })) };
+}
+
+function advanceShopOrders(order, step, actor) {
+  const from = step === 'accept' ? 'pending' : 'accepted';
+  const to = step === 'accept' ? 'accepted' : 'packed';
+  const isAdmin = actor.role === 'admin';
+  requireValue(isAdmin || actor.role === 'vendor' && order.vendorIds.includes(actor.vendorId), 'You cannot perform this action', 403);
+  requireValue(order.paymentStatus === 'verified' && ['paid', 'accepted'].includes(order.status), 'Order is not ready for this action', 409);
+  const canUpdate = shop => shop.status === from && (isAdmin || shop.vendorId === actor.vendorId);
+  requireValue(order.shopOrders.some(canUpdate), 'Shop is not ready for this action', 409);
+  const at = now();
+  const shopOrders = order.shopOrders.map(shop => canUpdate(shop) ? { ...shop, status: to, updatedAt: at } : shop);
+  const status = shopOrders.every(shop => shop.status === 'packed') ? 'packed' :
+    shopOrders.some(shop => shop.status === 'pending') ? 'paid' : 'accepted';
+  const event = { status: 'shop_' + to, ts: at, actor: actor.uid, ...(isAdmin ? {} : { vendorId: actor.vendorId }) };
+  const history = [...order.history, event];
+  if (status !== order.status) history.push({ status, ts: at, actor: actor.uid });
+  return { shopOrders, status, updatedAt: at, history,
+    ...(status !== order.status ? { [status + 'At']: at } : {}) };
+}
+
+function validateDeliveryCoverage(vendor, address) {
+  requireValue(vendor?.active === true, 'A shop in your bag is currently unavailable', 409);
+  requireValue(vendor.deliveryByDistanceOnly === true || vendor.pincodes?.includes(address.pincode), `${vendor.name} does not deliver to that PIN code`);
+  requireValue(withinDeliveryArea(vendor.pickup, address, vendor.radiusKm), `Delivery pin is outside ${vendor.name}’s local delivery area`);
+}
+
+async function estimateOrderRoute(vendors, address, estimate) {
+  const estimates = await Promise.all(vendors.map(vendor => estimate(vendor, address)));
+  if (estimates.length === 1) return estimates[0];
+
+  const route = await estimate(vendors[0], address, vendors.slice(1).map(vendor => vendor.pickup));
+  const parts = estimates.map(result => result.components);
+  const longestPreparation = parts.reduce((longest, part) =>
+    part.prep + part.packaging > longest.prep + longest.packaging ? part : longest);
+  return { ...eta({ prep: longestPreparation.prep, packaging: longestPreparation.packaging,
+    riderArrival: Math.max(...parts.map(part => part.riderArrival)), travelDelivery: route.components.travelDelivery,
+    buffer: Math.max(...parts.map(part => part.buffer)) }), source: route.source, calculatedAt: route.calculatedAt };
+}
+
 function orderPricing(items, vendor, gateway) {
   const itemsTotalPaise = items.reduce((sum, item) => sum + item.lineTotalPaise, 0);
   const quantity = items.reduce((sum, item) => sum + item.qty, 0);
@@ -372,16 +441,18 @@ function orderPricing(items, vendor, gateway) {
   return { itemsTotalPaise, apparelTaxPaise, platformFeePaise, deliveryFeePaise, totalPaise };
 }
 
-async function routeEstimate(vendor, address) {
+async function routeEstimate(vendor, address, stops = []) {
   const routeHeaders = await routeAuthentication();
+  const waypoint = point => ({ location: { latLng: { latitude: point.lat, longitude: point.lng } } });
   const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
-    method: 'POST', signal: AbortSignal.timeout(10000),
+    method: 'POST', signal: AbortSignal.timeout(8000),
     headers: { 'Content-Type': 'application/json', ...routeHeaders, 'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters' },
-    body: JSON.stringify({ origin: { location: { latLng: { latitude: vendor.pickup.lat, longitude: vendor.pickup.lng } } }, destination: { location: { latLng: { latitude: address.lat, longitude: address.lng } } }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE' }),
+    body: JSON.stringify({ origin: waypoint(vendor.pickup), destination: waypoint(address),
+      ...(stops.length ? { intermediates: stops.map(waypoint) } : {}), travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE' }),
   });
   requireValue(response.ok, 'Could not estimate the delivery route. Try later', 503);
   const route = (await response.json()).routes?.[0], seconds = Number(route?.duration?.replace(/s$/, ''));
   requireValue(Number.isFinite(seconds) && seconds > 0, 'No delivery route found', 503);
-  requireValue(Number.isFinite(route.distanceMeters) && route.distanceMeters <= vendor.radiusKm * 1000, 'Road route is outside the vendor’s delivery range', 409);
+  if (!stops.length) requireValue(Number.isFinite(route.distanceMeters) && route.distanceMeters <= vendor.radiusKm * 1000, `Road route is outside the vendor’s delivery range (${vendor.name})`, 409);
   return { ...eta({ prep: vendor.prep, packaging: vendor.packaging, riderArrival: vendor.riderArrival, travelDelivery: Math.ceil(seconds / 60), buffer: vendor.buffer }), source: 'Google Routes; rider arrival is an operations estimate', calculatedAt: now() };
 }
