@@ -68,6 +68,85 @@ test('distance-only coverage accepts any valid PIN within 25 road km and include
   assert.match((await call(customer, 'deliveryQuote', payload)).error, /outside the vendor’s delivery range/);
 });
 
+test('multi-shop checkout takes one payment, scopes each shop and waits for all pickups to be ready', async t => {
+  const config = { QF_PAYMENT_PROVIDER: 'razorpay', RAZORPAY_MODE: 'test', VERCEL_ENV: 'preview', FIREBASE_PROJECT_ID: 'qfashion-staging-20261101',
+    RAZORPAY_KEY_ID: 'rzp_test_mock', RAZORPAY_KEY_SECRET: 'mock-secret', RAZORPAY_WEBHOOK_SECRET: 'mock-webhook', GOOGLE_MAPS_SERVER_KEY: 'mock-maps' };
+  for (const [key, value] of Object.entries(config)) {
+    const old = process.env[key];
+    process.env[key] = value;
+    t.after(() => { if (old === undefined) delete process.env[key]; else process.env[key] = old; });
+  }
+  const first = { ...vendor, name: 'First shop', prep: 5, packaging: 5, riderArrival: 15, buffer: 15 };
+  const second = { ...first, name: 'Second shop', prep: 10, packaging: 7, riderArrival: 10, buffer: 12, pickup: { ...address, lat: 17.41 } };
+  const { call, rows, db } = harness({ 'vendors/vendor1': first, 'vendors/vendor2': second,
+    'variants/sku1': { ...variant, pricePaise: 55000, productType: 'Oversized tees' },
+    'variants/sku2': { ...variant, vendorId: 'vendor2', pricePaise: 20000, productType: 'Vests' } }, { estimateRoute: undefined });
+  let gatewayCalls = 0, outsideSecond = true, multiStopCalls = 0;
+  t.mock.method(globalThis, 'fetch', async (url, request) => {
+    const body = JSON.parse(request.body);
+    if (url.endsWith('/orders')) return Response.json({ id: `order_Mixed${++gatewayCalls}`, amount: body.amount, currency: 'INR' });
+    assert.equal(body.routingPreference, 'TRAFFIC_AWARE');
+    if (body.intermediates) {
+      multiStopCalls++;
+      assert.equal(body.intermediates[0].location.latLng.latitude, second.pickup.lat);
+      return Response.json({ routes: [{ duration: '1380s', distanceMeters: 12000 }] });
+    }
+    const distanceMeters = outsideSecond && body.origin.location.latLng.latitude === second.pickup.lat ? 10001 : 5000;
+    return Response.json({ routes: [{ duration: '600s', distanceMeters }] });
+  });
+  const payload = { address, lines: [{ variantId: 'sku1', qty: 1 }, { variantId: 'sku2', qty: 1 }] };
+  assert.match((await call(customer, 'deliveryQuote', payload)).error, /Second shop/);
+  assert.equal(multiStopCalls, 0);
+  outsideSecond = false;
+  const quote = await call(customer, 'deliveryQuote', payload);
+  assert.equal(quote.code, 200);
+  assert.deepEqual(quote.shopNames, ['First shop', 'Second shop']);
+  assert.equal(quote.eta.total, 70);
+  assert.equal(quote.deliveryFeePaise, 0);
+  assert.equal(quote.totalPaise, 82000);
+  const checkout = { ...payload, checkoutId: 'multi1', quoteKey: quote.quoteKey };
+  const payment = await call(customer, 'checkout', checkout);
+  assert.equal(payment.razorpay.orderId, 'order_Mixed1');
+  assert.equal(payment.order.vendorSnapshots, undefined);
+  assert.equal((await call(customer, 'checkout', checkout)).razorpay.orderId, 'order_Mixed1');
+  assert.equal(gatewayCalls, 1);
+  assert.deepEqual(rows.get('orders/multi1').shopOrders.map(shop => shop.itemsTotalPaise), [55000, 20000]);
+  assert.equal(rows.get('variants/sku1').stock, 1);
+  assert.equal(rows.get('variants/sku2').stock, 1);
+
+  const shop1 = { uid: 'shop1', role: 'vendor', vendorId: 'vendor1' };
+  const shop2 = { uid: 'shop2', role: 'vendor', vendorId: 'vendor2' };
+  const shop3 = { uid: 'shop3', role: 'vendor', vendorId: 'vendor3' };
+  const transition = (actor, step) => call(actor, 'transition', { orderId: 'multi1', step });
+  assert.equal((await transition(shop1, 'accept')).code, 409);
+  assert.equal(await recordCapturedPayment(db, { id: 'pay_Mixed1', order_id: 'order_Mixed1', amount: 82000, currency: 'INR', status: 'captured', captured: true }, 'test'), 'paid');
+  assert.equal((await transition(shop3, 'accept')).code, 403);
+  assert.equal((await transition(shop1, 'accept')).code, 200);
+  assert.equal((await transition(shop1, 'pack')).code, 200);
+  assert.equal(rows.get('orders/multi1').status, 'paid');
+  assert.equal((await transition(administrator, 'pickup')).code, 409);
+  db.collection = () => ({ where: () => ({ limit: () => ({ get: async () => ({ docs: [{ id: 'multi1', data: () => rows.get('orders/multi1') }] }) }) }) });
+  const { orders: [shopView] } = await call(shop2, 'orders');
+  assert.deepEqual(shopView.items.map(item => item.variantId), ['sku2']);
+  assert.equal(shopView.status, 'paid');
+  assert.equal(shopView.totalPaise, 20000);
+  assert.equal(shopView.address, undefined);
+  assert.equal(shopView.shopOrders, undefined);
+  assert.deepEqual((await call(shop3, 'orders')).orders, []);
+  assert.equal((await transition(shop2, 'accept')).code, 200);
+  assert.equal((await transition(shop2, 'pack')).code, 200);
+  assert.equal(rows.get('orders/multi1').status, 'packed');
+  assert.equal((await transition(administrator, 'pickup')).code, 409);
+  assert.equal((await call(administrator, 'assignRider', { orderId: 'multi1', name: 'Test courier', phone: address.phone })).code, 200);
+  assert.equal((await transition(administrator, 'pickup')).code, 200);
+  assert.equal((await call(administrator, 'transition', { orderId: 'multi1', step: 'deliver', otp: rows.get('customerProofs/multi1').otp })).code, 200);
+
+  assert.equal((await call(customer, 'checkout', { ...checkout, checkoutId: 'multi2' })).code, 200);
+  assert.equal((await call(customer, 'cancel', { orderId: 'multi2' })).code, 200);
+  assert.equal(rows.get('variants/sku1').stock, 1);
+  assert.equal(rows.get('variants/sku2').stock, 1);
+});
+
 test('checkout snapshots authoritative amounts and reserves once under retry', async () => {
   process.env.MANUAL_UPI_ENABLED = 'true'; process.env.MANUAL_UPI_UNTIL = '2099-01-01T00:00:00Z';
   const { rows, call } = harness(data());
@@ -184,7 +263,7 @@ test('Razorpay pilot quotes real prices before stock reservation and handles ret
   assert.equal(quote.eta.components.buffer, 5);
   assert.equal(rows.get('variants/sku1').stock, 2);
   assert.equal((await call(customer, 'deliveryQuote', { address: { ...address, pincode: '781039' }, lines })).code, 400);
-  assert.equal((await call(customer, 'deliveryQuote', { address, lines: [...lines, { variantId: 'sku2', qty: 1 }] })).code, 400);
+  assert.equal((await call(customer, 'deliveryQuote', { address, lines: [...lines, { variantId: 'sku2', qty: 1 }] })).code, 409);
   assert.equal((await call(customer, 'checkout', { ...request, checkoutId: 'pilot1', quoteKey: 'incorrect' })).code, 409);
   let created = 0;
   t.mock.method(globalThis, 'fetch', async (url, options) => {
