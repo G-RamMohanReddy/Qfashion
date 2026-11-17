@@ -7,7 +7,7 @@ import { createHandler } from '../api/marketplace.js';
 
 // Transactional in-memory adapter tests API authorization and persisted effects.
 // Firestore emulator tests remain a separate deployment gate.
-function harness(seed = {}) {
+function harness(seed = {}, options = {}) {
   const rows = new Map(Object.entries(seed));
   const snapshot = ref => ({ id: ref.id, exists: rows.has(ref.path), data: () => structuredClone(rows.get(ref.path)) });
   const doc = path => ({ path, id: path.split('/').at(-1), get: async () => snapshot(doc(path)), set: async (data, options) => rows.set(path, options?.merge ? { ...rows.get(path), ...structuredClone(data) } : structuredClone(data)) });
@@ -26,7 +26,7 @@ function harness(seed = {}) {
     },
   };
   const handler = createHandler({ expireReservations: async () => {}, getServices: () => ({ db, auth: {} }), authenticateUser: req => req.actor,
-    estimateRoute: async () => ({ total: 45, components: { prep: 10, packaging: 5, riderArrival: 10, travelDelivery: 15, buffer: 5 }, calculatedAt: Date.now() }) });
+    estimateRoute: async () => ({ total: 45, components: { prep: 10, packaging: 5, riderArrival: 10, travelDelivery: 15, buffer: 5 }, calculatedAt: Date.now() }), ...options });
   const call = async (actor, action, data = {}) => {
     const response = { setHeader() {}, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
     await handler({ method: 'POST', headers: {}, actor, body: { action, ...data } }, response);
@@ -41,6 +41,32 @@ const vendor = { name: 'Test Vendor', deliveryFeePaise: 3500, active: true, pinc
 const variant = { vendorId: 'vendor1', name: 'Dress', size: 'M', color: 'Green', pricePaise: 99900, stock: 2, published: true };
 const data = () => ({ 'vendors/vendor1': vendor, 'variants/sku1': variant });
 const order = overrides => ({ uid: customer.uid, vendorId: 'vendor1', vendorName: vendor.name, items: [{ variantId: 'sku1', qty: 1 }], totalPaise: 99900, status: 'awaiting_verification', paymentStatus: 'awaiting_verification', submittedReference: '123456789012', history: [], expiresAt: Date.now() + 60000, ...overrides });
+
+test('distance-only coverage accepts any valid PIN within 25 road km and includes all delivery timings', async t => {
+  const config = { QF_PAYMENT_PROVIDER: 'razorpay', RAZORPAY_MODE: 'test', VERCEL_ENV: 'preview', FIREBASE_PROJECT_ID: 'qfashion-staging-20261101',
+    RAZORPAY_KEY_ID: 'rzp_test_mock', RAZORPAY_KEY_SECRET: 'mock-secret', RAZORPAY_WEBHOOK_SECRET: 'mock-webhook', GOOGLE_MAPS_SERVER_KEY: 'mock-maps' };
+  for (const [key, value] of Object.entries(config)) {
+    const old = process.env[key];
+    process.env[key] = value;
+    t.after(() => { if (old === undefined) delete process.env[key]; else process.env[key] = old; });
+  }
+  const { call } = harness({ ...data(), 'variants/sku1': { ...variant, productType: 'Oversized tees' } }, { estimateRoute: undefined });
+  const bsMenz = { ...vendor, id: 'vendor1', radiusKm: 25, pincodes: [], deliveryByDistanceOnly: true,
+    prep: 5, packaging: 5, riderArrival: 15, buffer: 15 };
+  assert.equal((await call(administrator, 'saveVendor', { vendor: bsMenz })).code, 200);
+  let roadMeters = 25000;
+  t.mock.method(globalThis, 'fetch', async (_url, request) => {
+    assert.equal(JSON.parse(request.body).routingPreference, 'TRAFFIC_AWARE');
+    return Response.json({ routes: [{ duration: '1020s', distanceMeters: roadMeters }] });
+  });
+  const payload = { address: { ...address, pincode: '500002', lat: 17.41 }, lines: [{ variantId: 'sku1', qty: 1 }] };
+  const quote = await call(customer, 'deliveryQuote', payload);
+  assert.equal(quote.code, 200);
+  assert.equal(quote.eta.total, 57);
+  assert.equal(quote.eta.components.buffer, 15);
+  roadMeters += 1;
+  assert.match((await call(customer, 'deliveryQuote', payload)).error, /outside the vendor’s delivery range/);
+});
 
 test('checkout snapshots authoritative amounts and reserves once under retry', async () => {
   process.env.MANUAL_UPI_ENABLED = 'true'; process.env.MANUAL_UPI_UNTIL = '2099-01-01T00:00:00Z';
