@@ -290,9 +290,9 @@ function BasketDialog({ basket, onRemove, onClose, user, onAccount, onPayment, r
         <p className="text-sm">Choose a size on an item in the collection to add it to your bag.</p>
         <a href="#collection" className="btn-primary" onClick={onClose}>Browse the collection</a>
       </>)}
-      {step === 'delivery' && import.meta.env.VITE_QF_PILOT_CHECKOUT === 'true' && <PilotCheckout
+      {step === 'delivery' && (import.meta.env.VITE_QF_PILOT_CHECKOUT === 'true' || import.meta.env.VITE_QF_CHECKOUT_ENABLED === 'true') && <PilotCheckout
         user={user} basket={basket} onAccount={onAccount} onPayment={onPayment} />}
-      {step === 'delivery' && import.meta.env.VITE_QF_PILOT_CHECKOUT !== 'true' && <form onSubmit={reviewDelivery} className="space-y-4">
+      {step === 'delivery' && (import.meta.env.VITE_QF_PILOT_CHECKOUT !== 'true' && import.meta.env.VITE_QF_CHECKOUT_ENABLED !== 'true') && <form onSubmit={reviewDelivery} className="space-y-4">
         <label className="block text-sm font-medium">Flat or house number, building and street
           <input name="street" required pattern=".*\S.*" maxLength={160} autoComplete="address-line1" className="field mt-1" defaultValue={address?.street} />
         </label>
